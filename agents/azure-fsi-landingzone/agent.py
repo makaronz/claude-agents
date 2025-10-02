@@ -53,6 +53,22 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
             'policies_applied': []
         }
 
+        # Project name for organizing generated assets
+        self.project_name: Optional[str] = None
+
+    def get_project_dir(self) -> Path:
+        """
+        Get the project directory for storing generated assets.
+        Prompts for project name if not already set.
+        """
+        if not self.project_name:
+            # This will be prompted by the system prompt instructions
+            raise ValueError("Project name not set. Please provide a project name first.")
+
+        project_dir = self.config_dir / self.project_name
+        project_dir.mkdir(parents=True, exist_ok=True)
+        return project_dir
+
     def get_system_prompt(self) -> Optional[str]:
         """Get the system prompt for this agent."""
         return """You are an Azure Financial Services Industry (FSI) Landing Zone deployment expert.
@@ -62,6 +78,10 @@ You help organizations deploy secure, compliant Azure infrastructure using:
 1. **Microsoft FSI Landing Zone Templates**: Industry-specific reference architectures
 2. **Azure Verified Modules (AVM)**: Validated, production-ready infrastructure modules
 3. **European Compliance**: Built-in policies for GDPR, DORA, PSD2, MiFID II, EBA Guidelines
+
+IMPORTANT: Before generating any files (templates, plans, etc.), you MUST ask the user for a project name.
+This project name will be used to create a dedicated subfolder where all generated assets will be stored.
+Use the set_project_name tool to save the project name before proceeding with file generation.
 
 Your expertise includes:
 - Hub-spoke network architectures for financial services
@@ -89,6 +109,7 @@ and ensure best practices are followed for financial services workloads in Azure
     def get_custom_tools(self) -> List[Any]:
         """Get custom tools for this agent."""
         return [
+            self.set_project_name,
             self.check_azure_prerequisites,
             self.validate_azure_auth,
             self.get_fsi_compliance_requirements,
@@ -105,6 +126,36 @@ and ensure best practices are followed for financial services workloads in Azure
             self.deploy_conditional_access,
             self.setup_pim_roles,
         ]
+
+    @tool("set_project_name", "Set the project name for organizing generated assets in a dedicated subfolder", {"project_name": str})
+    async def set_project_name(self, args):
+        """Set the project name for file organization."""
+        project_name = args.get("project_name", "").strip()
+
+        if not project_name:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Project name cannot be empty. Please provide a valid project name."}
+                ]
+            }
+
+        # Sanitize project name (remove invalid characters for filesystem)
+        import re
+        sanitized_name = re.sub(r'[^\w\-_]', '_', project_name)
+
+        self.project_name = sanitized_name
+        project_dir = self.get_project_dir()
+
+        result_text = f"✅ Project name set: {sanitized_name}\n\n"
+        result_text += f"📁 All generated assets will be saved to:\n"
+        result_text += f"   {project_dir}\n\n"
+        result_text += "You can now proceed with generating templates, deployment plans, and other assets."
+
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
 
     @tool("check_azure_prerequisites", "Check if Azure CLI and required tools are installed", {})
     async def check_azure_prerequisites(self, args):
@@ -449,7 +500,18 @@ and ensure best practices are followed for financial services workloads in Azure
             }
 
         bicep_content = templates[component]
-        template_path = self.config_dir / "templates" / f"{component}.bicep"
+
+        # Get project directory
+        try:
+            project_dir = self.get_project_dir()
+        except ValueError:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Please set a project name first using set_project_name tool."}
+                ]
+            }
+
+        template_path = project_dir / f"{component}.bicep"
 
         # Save template
         template_path.parent.mkdir(parents=True, exist_ok=True)
@@ -998,9 +1060,19 @@ output dataResidencyPolicyId string = dataResidencyPolicy.id
         """Export deployment plan."""
         output_format = args.get("format", "markdown").lower()
 
+        # Get project directory
+        try:
+            project_dir = self.get_project_dir()
+        except ValueError:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Please set a project name first using set_project_name tool."}
+                ]
+            }
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"fsi-deployment-plan_{timestamp}.{output_format}"
-        output_path = self.config_dir / filename
+        output_path = project_dir / filename
 
         if output_format == "markdown":
             content = self._generate_markdown_plan()
@@ -1242,8 +1314,18 @@ output bastionName string = bastion.name
 output bastionDnsName string = bastionPublicIP.properties.dnsSettings.fqdn
 """
 
+        # Get project directory
+        try:
+            project_dir = self.get_project_dir()
+        except ValueError:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Please set a project name first using set_project_name tool."}
+                ]
+            }
+
         # Save template
-        template_path = self.config_dir / "templates" / "bastion.bicep"
+        template_path = project_dir / "azure-bastion.bicep"
         template_path.parent.mkdir(parents=True, exist_ok=True)
         with open(template_path, 'w') as f:
             f.write(bicep_content)
@@ -1493,9 +1575,19 @@ output bastionDnsName string = bastionPublicIP.properties.dnsSettings.fqdn
         policies_text += "4. Create break-glass admin account (exclude from CA)\n"
         policies_text += "5. Document all policies for compliance audits\n"
 
-        # Save policies to file
-        policies_path = self.config_dir / "templates" / "conditional-access-policies.json"
-        policies_path.parent.mkdir(parents=True, exist_ok=True)
+        # Get project directory (optional for this tool - only save if project is set)
+        try:
+            project_dir = self.get_project_dir()
+            # Save policies to file
+            policies_path = project_dir / "conditional-access-policies.json"
+            policies_path.parent.mkdir(parents=True, exist_ok=True)
+        except ValueError:
+            # Don't save file if no project name is set
+            return {
+                "content": [
+                    {"type": "text", "text": policies_text + "\n\n❌ File not saved. Please set a project name first using set_project_name tool."}
+                ]
+            }
 
         all_policies = [
             {
@@ -1749,6 +1841,7 @@ async def main():
     print("   • Generate Bicep/Terraform templates")
     print("   • Validate deployments and security posture")
     print("\n💬 Try asking me to:")
+    print("   - Set a project name (required before generating files)")
     print("   - Check Azure prerequisites")
     print("   - List FSI compliance requirements")
     print("   - Generate a hub VNet template")
