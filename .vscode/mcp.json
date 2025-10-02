@@ -3,6 +3,11 @@
     "claude-agent-sdk-python Docs": {
       "type": "sse",
       "url": "https://gitmcp.io/anthropics/claude-agent-sdk-python"
+    },
+
+    "agents.md Docs": {
+      "type": "sse",
+      "url": "https://gitmcp.io/openai/agents.md"
     }
   }
 }
