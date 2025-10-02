@@ -1,0 +1,25 @@
+# Agent configuration for example agent
+name: "example-agent"
+version: "1.0.0"
+description: "An example Claude agent demonstrating basic functionality"
+
+# Agent behavior settings
+max_message_length: 2000
+response_timeout: 30
+
+# Custom tools (disabled for this simple example)
+tools:
+  enabled: false
+  custom_tools_dir: "./tools"
+
+# Logging settings
+logging:
+  level: "INFO"
+  log_to_file: true
+  log_file: "./logs/agent.log"
+
+# MCP settings (disabled for this example)
+mcp:
+  enabled: false
+  server_port: 3001
+  server_host: "localhost"

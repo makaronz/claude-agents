@@ -1,0 +1,2 @@
+# No additional dependencies for the example agent
+# It uses only the shared utilities and standard library

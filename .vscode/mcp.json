@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "claude-agent-sdk-python Docs": {
+      "type": "sse",
+      "url": "https://gitmcp.io/anthropics/claude-agent-sdk-python"
+    }
+  }
+}

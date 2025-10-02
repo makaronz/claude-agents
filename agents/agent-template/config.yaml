@@ -1,0 +1,25 @@
+# Agent-specific configuration
+name: "template-agent"
+version: "1.0.0"
+description: "A template agent for creating new Claude agents"
+
+# Agent behavior settings
+max_message_length: 1000
+response_timeout: 30
+
+# Custom tools (optional)
+tools:
+  enabled: true
+  custom_tools_dir: "./tools"
+
+# Logging settings
+logging:
+  level: "INFO"
+  log_to_file: true
+  log_file: "./logs/agent.log"
+
+# MCP settings (if using MCP tools)
+mcp:
+  enabled: false
+  server_port: 3001
+  server_host: "localhost"
