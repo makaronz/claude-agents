@@ -8,6 +8,11 @@
     "agents.md Docs": {
       "type": "sse",
       "url": "https://gitmcp.io/openai/agents.md"
+    },
+
+    "Azure-Landing-Zones-Library Docs": {
+      "type": "sse",
+      "url": "https://azure.gitmcp.io/Azure-Landing-Zones-Library/"
     }
   }
 }

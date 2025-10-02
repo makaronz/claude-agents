@@ -1,0 +1,29 @@
+# Azure FSI Landing Zone Agent - Specific Dependencies
+
+# Core dependencies (from parent requirements.txt)
+claude-agent-sdk>=0.1.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Azure SDK dependencies
+azure-identity>=1.15.0
+azure-mgmt-resource>=23.0.0
+azure-mgmt-network>=25.0.0
+azure-mgmt-keyvault>=10.3.0
+azure-mgmt-storage>=21.1.0
+azure-mgmt-authorization>=4.0.0
+azure-mgmt-policyinsights>=1.1.0
+azure-mgmt-security>=6.0.0
+azure-mgmt-monitor>=6.0.0
+azure-mgmt-managementgroups>=1.0.0
+
+# Optional: For enhanced Azure CLI integration
+azure-cli-core>=2.50.0
+
+# Optional: For Terraform support
+python-terraform>=0.10.1
+
+# Utilities
+requests>=2.31.0
+aiohttp>=3.8.0

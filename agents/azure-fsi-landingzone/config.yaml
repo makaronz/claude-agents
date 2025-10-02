@@ -1,0 +1,198 @@
+# Azure FSI Landing Zone Agent Configuration
+name: "azure-fsi-landingzone"
+version: "1.0.0"
+description: "Azure Financial Services Industry (FSI) Landing Zone deployment agent using Microsoft templates, AVM modules, and European compliance policies"
+
+# Claude Agent SDK settings
+system_prompt: null  # Uses the agent's get_system_prompt() method
+model: "claude-sonnet-4-5"
+max_turns: null  # Unlimited turns
+permission_mode: "default"
+
+# Allowed tools (custom tools are auto-added)
+allowed_tools:
+  - "Read"
+  - "Write"
+  - "Bash"
+  - "Grep"
+  - "Glob"
+
+# Azure configuration
+azure:
+  # Subscription and tenant settings
+  subscription_id: null  # Set via environment variable AZURE_SUBSCRIPTION_ID
+  tenant_id: null  # Set via environment variable AZURE_TENANT_ID
+
+  # Landing zone configuration
+  landing_zone:
+    # FSI Landing Zone templates
+    template_source: "microsoft"  # microsoft, custom, or local
+    fsi_template_version: "latest"
+
+    # Azure Verified Modules (AVM)
+    use_avm_modules: true
+    avm_modules:
+      - "avm/res/network/virtual-network"
+      - "avm/res/network/network-security-group"
+      - "avm/res/key-vault/vault"
+      - "avm/res/storage/storage-account"
+      - "avm/res/security/security-center"
+      - "avm/res/policy/policy-assignment"
+      - "avm/res/management/management-group"
+
+    # Default region for deployments
+    default_region: "westeurope"
+
+    # Naming convention
+    naming_prefix: "fsi"
+    environment: "prod"  # prod, dev, test
+
+  # Compliance and policy configuration
+  compliance:
+    # European regulations for FSI
+    regulations:
+      - "GDPR"          # General Data Protection Regulation
+      - "DORA"          # Digital Operational Resilience Act
+      - "PSD2"          # Payment Services Directive 2
+      - "MiFID_II"      # Markets in Financial Instruments Directive
+      - "EBA_GL"        # European Banking Authority Guidelines
+
+    # Built-in policy initiatives to apply
+    policy_initiatives:
+      - "Azure_Security_Benchmark"
+      - "CIS_Azure_Foundations_Benchmark"
+      - "NIST_SP_800-53_Rev5"
+      - "GDPR"
+      - "PCI_DSS_v4"
+
+    # Custom policies for European FSI
+    custom_policies:
+      data_residency:
+        enabled: true
+        allowed_regions:
+          - "westeurope"
+          - "northeurope"
+          - "francecentral"
+          - "germanywestcentral"
+
+      encryption:
+        enabled: true
+        require_cmk: true  # Customer-managed keys
+        require_double_encryption: true
+
+      network_security:
+        enabled: true
+        require_private_endpoints: true
+        deny_public_ip: true
+        require_nsg: true
+
+      monitoring:
+        enabled: true
+        require_diagnostic_settings: true
+        log_retention_days: 365
+        require_defender_for_cloud: true
+
+  # Architecture configuration
+  architecture:
+    # Hub-spoke topology
+    topology: "hub-spoke"
+
+    # Hub configuration
+    hub:
+      vnet_address_space: "10.0.0.0/16"
+      subnets:
+        - name: "AzureFirewallSubnet"
+          address_prefix: "10.0.0.0/24"
+        - name: "GatewaySubnet"
+          address_prefix: "10.0.1.0/24"
+        - name: "AzureBastionSubnet"
+          address_prefix: "10.0.2.0/24"
+
+      components:
+        - "azure-firewall"
+        - "vpn-gateway"
+        - "bastion"
+        - "ddos-protection"
+
+    # Spoke configuration template
+    spoke_template:
+      vnet_address_space: "10.1.0.0/16"
+      subnets:
+        - name: "application"
+          address_prefix: "10.1.0.0/24"
+        - name: "data"
+          address_prefix: "10.1.1.0/24"
+        - name: "privatelink"
+          address_prefix: "10.1.2.0/24"
+
+    # Management and monitoring
+    management:
+      - "log-analytics-workspace"
+      - "automation-account"
+      - "key-vault"
+      - "recovery-services-vault"
+      - "storage-account-logs"
+
+# Deployment configuration
+deployment:
+  validation:
+    enabled: true
+    what_if: true  # Run what-if analysis before deployment
+    pre_deployment_checks:
+      - "check_azure_cli"
+      - "check_authentication"
+      - "check_subscription_access"
+      - "validate_naming"
+      - "check_region_availability"
+      - "validate_policies"
+
+  terraform:
+    enabled: false  # Use Bicep by default
+    version: ">=1.5.0"
+
+  bicep:
+    enabled: true
+    version: ">=0.24.0"
+    linter: true
+
+  arm:
+    enabled: false  # Prefer Bicep over ARM JSON
+
+  # Rollback configuration
+  rollback:
+    enabled: true
+    automatic: false
+    backup_before_deploy: true
+
+# Security configuration
+security:
+  # Secret management
+  secrets:
+    use_key_vault: true
+    rotate_secrets: true
+    rotation_period_days: 90
+
+  # Access control
+  rbac:
+    enforce_least_privilege: true
+    require_pim: true  # Privileged Identity Management
+    require_mfa: true
+
+  # Threat protection
+  threat_protection:
+    defender_for_cloud_tier: "standard"
+    enable_jit_access: true
+    enable_adaptive_application_controls: true
+
+# Logging configuration
+logging:
+  level: "INFO"
+  log_to_file: true
+  log_file: "./logs/agent.log"
+
+  # Azure deployment logging
+  azure_logging:
+    log_deployments: true
+    log_policy_assignments: true
+    log_resource_changes: true
+    verbose: false
