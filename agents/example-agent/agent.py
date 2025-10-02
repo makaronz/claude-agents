@@ -1,218 +1,181 @@
 """
-Example Claude agent implementation.
+Example Claude agent implementation using Claude Agent SDK.
 
-This agent demonstrates the basic structure and functionality of a Claude agent
-using the shared utilities and template structure.
+This agent demonstrates the structure and functionality of a Claude agent
+using the official Claude Agent SDK with custom tools and interactive features.
 """
 
 import asyncio
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import List, Any, Optional
 from datetime import datetime
 
-# Add the shared utilities to the path
+# Add the shared modules to the path
 sys.path.append(str(Path(__file__).parent.parent.parent / "shared"))
 
-from utils import setup_logging, get_logger, load_config, validate_config
+from agents import InteractiveAgent
+from utils import setup_logging
+from claude_agent_sdk import tool
 
 
-class ExampleAgent:
+class ExampleAgent(InteractiveAgent):
     """
-    Example Claude agent that demonstrates basic functionality.
+    Example Claude agent using Claude Agent SDK.
     
-    This agent provides a simple conversational interface and shows
-    how to use the shared utilities and configuration system.
+    This agent demonstrates:
+    - Custom system prompts
+    - Custom MCP tools
+    - Interactive conversation capabilities
+    - Proper logging and configuration
     """
     
-    def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize the example agent.
-        
-        Args:
-            config: Agent configuration dictionary
-        """
-        self.config = config
-        self.logger = get_logger(__name__)
-        self.name = config.get("agent_name", "example-agent")
+    def __init__(self, config_dir: Path):
+        super().__init__(config_dir)
         self.start_time = datetime.now()
         self.message_count = 0
+    
+    def get_system_prompt(self) -> Optional[str]:
+        """Get the system prompt for this agent."""
+        return (
+            "You are an example Claude agent built with the Claude Agent SDK. "
+            "You are helpful, friendly, and demonstrate various agent capabilities. "
+            "You have access to custom tools and can help users understand how "
+            "Claude agents work. You keep track of conversation statistics and "
+            "can provide information about your capabilities."
+        )
+    
+    def get_custom_tools(self) -> List[Any]:
+        """Get custom tools for this agent."""
+        return [
+            self.get_agent_status,
+            self.get_current_time,
+            self.count_words,
+            self.reverse_text,
+        ]
+    
+    @tool("get_agent_status", "Get current status and statistics for this agent", {})
+    async def get_agent_status(self, args):
+        """Get agent status and statistics."""
+        uptime = datetime.now() - self.start_time
         
-        self.logger.info(f"Initializing {self.name}")
+        status_info = {
+            "name": self.agent_config.get('name', 'Example Agent'),
+            "version": self.agent_config.get('version', '1.0.0'),
+            "uptime_seconds": uptime.total_seconds(),
+            "messages_processed": self.message_count,
+            "started_at": self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            "custom_tools": len(self.get_custom_tools())
+        }
         
-        # Available commands
-        self.commands = {
-            "help": self._help_command,
-            "status": self._status_command,
-            "config": self._config_command,
-            "time": self._time_command
+        status_text = "🤖 Agent Status:\n"
+        for key, value in status_info.items():
+            status_text += f"• {key.replace('_', ' ').title()}: {value}\n"
+        
+        return {
+            "content": [
+                {"type": "text", "text": status_text}
+            ]
         }
     
-    async def initialize(self) -> None:
-        """
-        Initialize the agent (async setup).
-        """
-        self.logger.info("Agent initialization complete")
-        print(f"\n🤖 {self.name} initialized successfully!")
-        print("Type 'help' for available commands or just chat with me.")
-    
-    async def process_message(self, message: str) -> str:
-        """
-        Process a message and return a response.
-        
-        Args:
-            message: Input message to process
-            
-        Returns:
-            Agent response
-        """
-        self.message_count += 1
-        self.logger.info(f"Processing message #{self.message_count}: {message[:50]}...")
-        
-        # Check if it's a command
-        if message.lower().strip() in self.commands:
-            response = await self.commands[message.lower().strip()]()
-        else:
-            # Regular conversation
-            response = await self._process_conversation(message)
-        
-        self.logger.info("Message processed successfully")
-        return response
-    
-    async def _process_conversation(self, message: str) -> str:
-        """
-        Process a regular conversational message.
-        
-        Args:
-            message: User message
-            
-        Returns:
-            Agent response
-        """
-        # Simple conversational responses
-        message_lower = message.lower()
-        
-        if any(greeting in message_lower for greeting in ["hello", "hi", "hey"]):
-            return f"Hello! I'm {self.name}. How can I help you today?"
-        
-        elif any(word in message_lower for word in ["how are you", "how's it going"]):
-            uptime = datetime.now() - self.start_time
-            return f"I'm doing well! I've been running for {uptime.seconds} seconds and have processed {self.message_count} messages."
-        
-        elif any(word in message_lower for word in ["what can you do", "capabilities"]):
-            return ("I'm an example Claude agent! I can:\n"
-                   "• Have conversations with you\n"
-                   "• Respond to commands (try 'help')\n"
-                   "• Show my status and configuration\n"
-                   "• Demonstrate proper logging and error handling")
-        
-        elif "weather" in message_lower:
-            return "I don't have access to real weather data, but I hope it's nice where you are! 🌞"
-        
-        elif any(word in message_lower for word in ["thank", "thanks"]):
-            return "You're welcome! I'm happy to help."
-        
-        else:
-            return (f"Thanks for your message! I'm a simple example agent, so I might not have "
-                   f"specific knowledge about '{message}', but I'm here to chat. "
-                   f"Try typing 'help' to see what I can do!")
-    
-    async def _help_command(self) -> str:
-        """Show available commands."""
-        return ("Available commands:\n"
-               "• help - Show this help message\n"
-               "• status - Show agent status\n"
-               "• config - Show configuration info\n"
-               "• time - Show current time\n"
-               "• quit - Exit the agent\n\n"
-               "Or just chat with me normally!")
-    
-    async def _status_command(self) -> str:
-        """Show agent status."""
-        uptime = datetime.now() - self.start_time
-        return (f"Agent Status:\n"
-               f"• Name: {self.name}\n"
-               f"• Uptime: {uptime.seconds} seconds\n"
-               f"• Messages processed: {self.message_count}\n"
-               f"• Started: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    async def _config_command(self) -> str:
-        """Show configuration information."""
-        return (f"Configuration:\n"
-               f"• Agent name: {self.config.get('agent_name', 'N/A')}\n"
-               f"• Log level: {self.config.get('log_level', 'N/A')}\n"
-               f"• MCP server port: {self.config.get('mcp_server_port', 'N/A')}\n"
-               f"• MCP server host: {self.config.get('mcp_server_host', 'N/A')}")
-    
-    async def _time_command(self) -> str:
-        """Show current time."""
+    @tool("get_current_time", "Get the current date and time", {})
+    async def get_current_time(self, args):
+        """Get current date and time."""
         now = datetime.now()
-        return f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        time_info = {
+            "current_time": now.strftime('%Y-%m-%d %H:%M:%S'),
+            "iso_format": now.isoformat(),
+            "weekday": now.strftime('%A'),
+            "timezone": str(now.astimezone().tzinfo)
+        }
+        
+        time_text = "🕐 Current Time Information:\n"
+        for key, value in time_info.items():
+            time_text += f"• {key.replace('_', ' ').title()}: {value}\n"
+        
+        return {
+            "content": [
+                {"type": "text", "text": time_text}
+            ]
+        }
     
-    async def run(self) -> None:
-        """
-        Main agent run loop.
-        """
-        self.logger.info("Starting agent run loop")
+    @tool("count_words", "Count words, characters, and lines in text", {"text": str})
+    async def count_words(self, args):
+        """Count words, characters, and lines in provided text."""
+        text = args.get("text", "")
         
-        print(f"\n{'='*50}")
-        print(f"  {self.name.upper()} - Example Claude Agent")
-        print(f"{'='*50}")
-        print("\nI'm ready to chat! Type 'quit' to exit.")
+        stats = {
+            "characters": len(text),
+            "characters_no_spaces": len(text.replace(" ", "")),
+            "words": len(text.split()),
+            "lines": len(text.splitlines()),
+            "paragraphs": len([p for p in text.split('\n\n') if p.strip()])
+        }
         
-        while True:
-            try:
-                user_input = input(f"\n💬 You: ").strip()
-                
-                if user_input.lower() in ['quit', 'exit', 'bye']:
-                    print(f"\n👋 {self.name}: Goodbye! Thanks for chatting.")
-                    break
-                
-                if user_input:
-                    response = await self.process_message(user_input)
-                    print(f"\n🤖 {self.name}: {response}")
-                    
-            except KeyboardInterrupt:
-                print(f"\n\n👋 {self.name}: Goodbye! (Interrupted)")
-                break
-            except Exception as e:
-                self.logger.error(f"Error processing input: {e}")
-                print(f"\n❌ {self.name}: Sorry, I encountered an error: {e}")
+        stats_text = f"📊 Text Statistics for: '{text[:50]}{'...' if len(text) > 50 else ''}'\n"
+        for key, value in stats.items():
+            stats_text += f"• {key.replace('_', ' ').title()}: {value}\n"
+        
+        return {
+            "content": [
+                {"type": "text", "text": stats_text}
+            ]
+        }
+    
+    @tool("reverse_text", "Reverse the provided text", {"text": str})
+    async def reverse_text(self, args):
+        """Reverse the provided text."""
+        text = args.get("text", "")
+        reversed_text = text[::-1]
+        
+        result_text = f"🔄 Text Reversal:\n• Original: {text}\n• Reversed: {reversed_text}"
+        
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
+    
+    async def query(self, prompt: str):
+        """Override query to track message count."""
+        self.message_count += 1
+        self.logger.info(f"Processing message #{self.message_count}: {prompt[:50]}...")
+        
+        async for message in super().query(prompt):
+            yield message
 
 
 async def main():
     """
     Main entry point for the example agent.
     """
-    # Load configuration
     config_dir = Path(__file__).parent
-    config = load_config(config_dir)
-    
-    # Override agent name for this example
-    config["agent_name"] = "example-agent"
-    
-    # Validate configuration
-    errors = validate_config(config)
-    if errors:
-        print("❌ Configuration errors:")
-        for error in errors:
-            print(f"  • {error}")
-        print("\nPlease check your .env file and configuration.")
-        return
     
     # Set up logging
     logs_dir = config_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
     
     setup_logging(
-        level=config.get("log_level", "INFO"),
+        level="INFO",
         log_file=logs_dir / "agent.log"
     )
     
-    # Create and run agent
-    agent = ExampleAgent(config)
-    await agent.initialize()
-    await agent.run()
+    # Create and run the agent
+    agent = ExampleAgent(config_dir)
+    
+    print("\n🎉 Welcome to the Example Claude Agent!")
+    print("This agent demonstrates Claude Agent SDK capabilities including:")
+    print("• Custom tools for status, time, text analysis")
+    print("• Interactive conversation")
+    print("• Proper logging and configuration")
+    print("\nTry asking me to:")
+    print("- Check my status")
+    print("- Get the current time") 
+    print("- Count words in some text")
+    print("- Reverse some text")
+    print("- Or just have a normal conversation!")
+    
+    await agent.run_interactive()
 
 
 if __name__ == "__main__":

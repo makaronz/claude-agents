@@ -1,6 +1,6 @@
 # Claude Agents Repository
 
-A collection of Claude agents built using the Claude Agent SDK and Model Context Protocol (MCP).
+A collection of Claude agents built using the official **Claude Agent SDK** for Python.
 
 ## Repository Structure
 
@@ -8,10 +8,10 @@ A collection of Claude agents built using the Claude Agent SDK and Model Context
 claude-agents/
 ├── agents/                 # Individual agent implementations
 │   ├── agent-template/     # Template for new agents
-│   └── example-agent/      # Example agent implementation
-├── shared/                 # Shared utilities and components
+│   └── example-agent/      # Example agent with custom tools
+├── shared/                 # Shared utilities and base classes
+│   ├── agents.py          # BaseClaudeAgent and InteractiveAgent classes
 │   ├── utils/             # Common utility functions
-│   ├── tools/             # Reusable MCP tools
 │   └── configs/           # Shared configuration files
 ├── docs/                  # Documentation
 │   ├── getting-started.md # Getting started guide
@@ -22,46 +22,90 @@ claude-agents/
 └── examples/              # Example implementations and demos
 ```
 
+## Features
+
+✨ **Built with Claude Agent SDK**: Uses the official Python SDK for Claude agents  
+🛠️ **Custom Tools**: Easy creation of custom MCP tools using decorators  
+🤖 **Interactive Agents**: Ready-to-use interactive conversation interfaces  
+⚙️ **Configuration Management**: YAML-based configuration with environment overrides  
+📝 **Comprehensive Logging**: Structured logging with file and console output  
+🎯 **Type Safety**: Full type hints and validation  
+
 ## Quick Start
 
-1. **Clone the repository**
+1. **Clone and set up the environment**
    ```bash
    git clone <repository-url>
    cd claude-agents
+   ./scripts/setup.sh
+   source venv/bin/activate
    ```
 
-2. **Set up the environment**
+2. **Configure your API key**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   cp .env.example .env
+   # Edit .env and add your ANTHROPIC_API_KEY
    ```
 
-3. **Create your first agent**
+3. **Try the example agent**
+   ```bash
+   cd agents/example-agent
+   python agent.py
+   ```
+
+4. **Create your first custom agent**
    ```bash
    cp -r agents/agent-template agents/my-first-agent
    cd agents/my-first-agent
-   # Edit the configuration and implementation files
+   # Edit config.yaml and agent.py
+   python agent.py
    ```
 
 ## Available Agents
 
-<!-- List your agents here as you create them -->
-- **agent-template**: Template for creating new agents
-- **example-agent**: Basic example showing agent structure
-
-## Contributing
-
-1. Use the `agent-template` as a starting point for new agents
-2. Follow the established directory structure
-3. Add documentation for your agents
-4. Include tests for your implementations
+- **🏗️ agent-template**: Complete template for creating new agents with custom tools
+- **🎯 example-agent**: Feature-rich example showing Claude Agent SDK capabilities
 
 ## Requirements
 
-- Python 3.8+
-- Claude Agent SDK
-- Model Context Protocol (MCP) support
+- Python 3.10+
+- Node.js (for Claude Code CLI)
+- Claude Agent SDK: `pip install claude-agent-sdk`
+- Anthropic API key
+
+## Key Components
+
+### BaseClaudeAgent
+Base class providing:
+- Claude Agent SDK integration
+- Configuration management  
+- Custom tool support
+- Async context manager support
+
+### InteractiveAgent
+Extends BaseClaudeAgent with:
+- Interactive conversation loops
+- Message display formatting
+- Command-line interface
+
+### Custom Tools
+Create custom tools using the `@tool` decorator:
+
+```python
+from claude_agent_sdk import tool
+
+@tool("my_tool", "Description of what it does", {"param": str})
+async def my_custom_tool(args):
+    return {"content": [{"type": "text", "text": "Result"}]}
+```
+
+## Contributing
+
+1. Use the `agent-template` as a starting point
+2. Follow the established directory structure  
+3. Add comprehensive documentation
+4. Include tests for custom functionality
+5. Use type hints throughout
 
 ## License
 

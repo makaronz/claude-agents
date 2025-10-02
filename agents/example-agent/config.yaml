@@ -1,25 +1,23 @@
-# Agent configuration for example agent
+# Example agent configuration using Claude Agent SDK
 name: "example-agent"
 version: "1.0.0"
-description: "An example Claude agent demonstrating basic functionality"
+description: "An example Claude agent demonstrating Claude Agent SDK features with custom tools"
 
-# Agent behavior settings
-max_message_length: 2000
-response_timeout: 30
+# Claude Agent SDK settings
+system_prompt: null  # Uses the agent's get_system_prompt() method
+model: "claude-sonnet-4-5"
+max_turns: null  # Unlimited turns
+permission_mode: "default"
 
-# Custom tools (disabled for this simple example)
-tools:
-  enabled: false
-  custom_tools_dir: "./tools"
+# Allowed tools (custom tools are auto-added)
+allowed_tools:
+  - "Read"
+  - "Write"
+  - "Bash"
+  - "Grep"
 
 # Logging settings
 logging:
   level: "INFO"
   log_to_file: true
   log_file: "./logs/agent.log"
-
-# MCP settings (disabled for this example)
-mcp:
-  enabled: false
-  server_port: 3001
-  server_host: "localhost"

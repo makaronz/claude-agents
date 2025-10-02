@@ -1,125 +1,101 @@
 """
-Template agent implementation.
+Template agent implementation using Claude Agent SDK.
 
-This is a basic template for creating Claude agents. Customize this file
-to implement your specific agent behavior.
+This is a template for creating Claude agents using the official Claude Agent SDK.
+Customize this file to implement your specific agent behavior.
 """
 
 import asyncio
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import List, Any, Optional
 
-# Add the shared utilities to the path
+# Add the shared modules to the path
 sys.path.append(str(Path(__file__).parent.parent.parent / "shared"))
 
-from utils import setup_logging, get_logger, load_config, validate_config
+from agents import BaseClaudeAgent, InteractiveAgent
+from utils import setup_logging
+from claude_agent_sdk import tool
 
 
-class TemplateAgent:
+class TemplateAgent(InteractiveAgent):
     """
-    Template agent class.
+    Template agent class using Claude Agent SDK.
     
     This is a basic implementation that can be customized for specific use cases.
+    Inherits from InteractiveAgent to provide conversation capabilities.
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def get_system_prompt(self) -> Optional[str]:
         """
-        Initialize the agent with configuration.
+        Get the system prompt for this agent.
         
-        Args:
-            config: Agent configuration dictionary
+        Override this method to provide a custom system prompt.
         """
-        self.config = config
-        self.logger = get_logger(__name__)
-        self.name = config.get("agent_name", "template-agent")
-        
-        self.logger.info(f"Initializing {self.name} agent")
+        return (
+            "You are a helpful template agent. You can assist with various tasks and "
+            "demonstrate the capabilities of the Claude Agent SDK. You have access to "
+            "custom tools and can help users understand how to build their own agents."
+        )
     
-    async def initialize(self) -> None:
+    def get_custom_tools(self) -> List[Any]:
         """
-        Initialize the agent (async setup).
+        Get custom tools for this agent.
         
-        Override this method to add custom initialization logic.
+        Override this method to add custom MCP tools for your agent.
         """
-        self.logger.info("Agent initialization complete")
+        return [
+            self.example_tool,
+            self.get_agent_info,
+        ]
     
-    async def process_message(self, message: str) -> str:
-        """
-        Process a message and return a response.
+    @tool("example_tool", "An example custom tool that processes text", {"text": str})
+    async def example_tool(self, args):
+        """Example custom tool that processes text."""
+        text = args.get("text", "")
+        processed_text = f"Processed: {text.upper()} (length: {len(text)})"
         
-        Args:
-            message: Input message to process
-            
-        Returns:
-            Agent response
-        """
-        self.logger.info(f"Processing message: {message[:50]}...")
-        
-        # This is where you would implement your agent's main logic
-        # For now, just return a simple response
-        response = f"Hello! I'm {self.name}. I received your message: {message}"
-        
-        self.logger.info("Message processed successfully")
-        return response
+        return {
+            "content": [
+                {"type": "text", "text": processed_text}
+            ]
+        }
     
-    async def run(self) -> None:
-        """
-        Main agent run loop.
+    @tool("get_agent_info", "Get information about this agent", {})
+    async def get_agent_info(self, args):
+        """Get information about this agent."""
+        info = {
+            "name": self.agent_config.get('name', 'Template Agent'),
+            "version": self.agent_config.get('version', '1.0.0'),
+            "description": self.agent_config.get('description', 'A template agent'),
+            "custom_tools": len(self.get_custom_tools()),
+            "config_dir": str(self.config_dir)
+        }
         
-        Override this method to implement your agent's main behavior.
-        """
-        self.logger.info("Starting agent run loop")
+        info_text = "\n".join([f"{k}: {v}" for k, v in info.items()])
         
-        # Example: simple interactive loop
-        print(f"\n{self.name} is ready! Type 'quit' to exit.")
-        
-        while True:
-            try:
-                user_input = input("\nYou: ").strip()
-                
-                if user_input.lower() in ['quit', 'exit', 'bye']:
-                    print("Goodbye!")
-                    break
-                
-                if user_input:
-                    response = await self.process_message(user_input)
-                    print(f"\n{self.name}: {response}")
-                    
-            except KeyboardInterrupt:
-                print("\nGoodbye!")
-                break
-            except Exception as e:
-                self.logger.error(f"Error processing input: {e}")
-                print(f"Sorry, I encountered an error: {e}")
+        return {
+            "content": [
+                {"type": "text", "text": f"Agent Information:\n{info_text}"}
+            ]
+        }
 
 
 async def main():
     """
-    Main entry point for the agent.
+    Main entry point for the template agent.
     """
-    # Load configuration
     config_dir = Path(__file__).parent
-    config = load_config(config_dir)
-    
-    # Validate configuration
-    errors = validate_config(config)
-    if errors:
-        print("Configuration errors:")
-        for error in errors:
-            print(f"  - {error}")
-        return
     
     # Set up logging
     setup_logging(
-        level=config.get("log_level", "INFO"),
+        level="INFO",
         log_file=config_dir / "logs" / "agent.log"
     )
     
-    # Create and run agent
-    agent = TemplateAgent(config)
-    await agent.initialize()
-    await agent.run()
+    # Create and run the agent
+    agent = TemplateAgent(config_dir)
+    await agent.run_interactive()
 
 
 if __name__ == "__main__":

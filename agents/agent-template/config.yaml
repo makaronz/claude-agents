@@ -1,25 +1,22 @@
-# Agent-specific configuration
+# Agent configuration using Claude Agent SDK
 name: "template-agent"
-version: "1.0.0"
-description: "A template agent for creating new Claude agents"
+version: "1.0.0" 
+description: "A template agent for creating new Claude agents using the official Claude Agent SDK"
 
-# Agent behavior settings
-max_message_length: 1000
-response_timeout: 30
+# Claude Agent SDK settings
+system_prompt: null  # Will use the agent's get_system_prompt() method
+model: "claude-sonnet-4-5"  # or "claude-opus-3-5", "claude-haiku-3-5"
+max_turns: null  # null for unlimited
+permission_mode: "default"  # "default", "acceptEdits", "rejectEdits"
 
-# Custom tools (optional)
-tools:
-  enabled: true
-  custom_tools_dir: "./tools"
+# Allowed tools (will be auto-populated with custom tools)
+allowed_tools:
+  - "Read"
+  - "Write" 
+  - "Bash"
 
 # Logging settings
 logging:
   level: "INFO"
   log_to_file: true
   log_file: "./logs/agent.log"
-
-# MCP settings (if using MCP tools)
-mcp:
-  enabled: false
-  server_port: 3001
-  server_host: "localhost"
