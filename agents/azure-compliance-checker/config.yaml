@@ -1,0 +1,116 @@
+# Azure Compliance Checker Agent Configuration
+name: "azure-compliance-checker"
+version: "1.0.0"
+description: "Azure compliance validation agent for French FSI regulations (ACPR, CRD IV/CRR, LCB-FT, RGPD, ISO 27001, DORA, NIS2)"
+
+# Claude Agent SDK settings
+system_prompt: null  # Uses the agent's get_system_prompt() method
+model: "claude-sonnet-4-5"
+max_turns: null  # Unlimited turns
+permission_mode: "default"
+
+# Allowed tools (custom tools are auto-added)
+allowed_tools:
+  - "Read"
+  - "Write"
+  - "Bash"
+  - "Grep"
+  - "Glob"
+
+# Compliance configuration
+compliance:
+  # Checklist directory
+  checklists_dir: "./checklists"
+  reports_dir: "./reports"
+
+  # Default checklist
+  default_checklist: "french-fsi-regulations.yaml"
+
+  # Azure validation settings
+  azure:
+    # Timeout for Azure CLI queries (seconds)
+    query_timeout: 30
+
+    # Maximum resources to display
+    max_resources_display: 10
+
+    # Resource query settings
+    use_resource_graph: true  # Use Azure Resource Graph for faster queries
+
+  # Report settings
+  reports:
+    # Default format (markdown, json, html)
+    default_format: "markdown"
+
+    # Include detailed evidence
+    include_evidence: true
+
+    # Include remediation guidance
+    include_remediation: true
+
+    # Compliance threshold for warnings (%)
+    compliance_warning_threshold: 80
+    compliance_critical_threshold: 50
+
+  # Supported regulations
+  regulations:
+    acpr:
+      name: "ACPR – Gouvernance SI"
+      description: "Autorité de Contrôle Prudentiel et de Résolution"
+      priority: "high"
+
+    crd_crr:
+      name: "CRD IV / CRR"
+      description: "Capital Requirements Directive/Regulation"
+      priority: "high"
+
+    lcb_ft:
+      name: "LCB-FT / AMLD5"
+      description: "Anti-Money Laundering Directive"
+      priority: "critical"
+
+    rgpd:
+      name: "RGPD / CNIL"
+      description: "General Data Protection Regulation"
+      priority: "critical"
+
+    iso_27001:
+      name: "ISO 27001 / SOC 2"
+      description: "Information Security Management"
+      priority: "high"
+
+    dora:
+      name: "DORA (2025)"
+      description: "Digital Operational Resilience Act"
+      priority: "high"
+
+    nis2:
+      name: "NIS2 (2024/25)"
+      description: "Network and Information Security Directive"
+      priority: "high"
+
+  # Validation modes
+  validation:
+    # Strict mode (fail on warnings)
+    strict_mode: false
+
+    # Skip manual controls
+    skip_manual: false
+
+    # Parallel validation (faster but may hit rate limits)
+    parallel: false
+
+    # Cache results (seconds)
+    cache_duration: 300
+
+# Logging configuration
+logging:
+  level: "INFO"
+  log_to_file: true
+  log_file: "./logs/agent.log"
+
+  # Compliance logging
+  compliance_logging:
+    log_validations: true
+    log_azure_queries: true
+    verbose: false

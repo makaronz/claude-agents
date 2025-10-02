@@ -66,6 +66,7 @@ claude-agents/
 - **🏗️ agent-template**: Complete template for creating new agents with custom tools
 - **🎯 example-agent**: Feature-rich example showing Claude Agent SDK capabilities
 - **🏦 azure-fsi-landingzone**: Azure Financial Services Industry Landing Zone deployment agent with European compliance (GDPR, DORA, PSD2, MiFID II)
+- **📋 azure-compliance-checker**: Automated compliance validation agent for French FSI regulations (ACPR, CRD IV/CRR, LCB-FT, RGPD, ISO 27001, DORA, NIS2)
 
 ## Requirements
 

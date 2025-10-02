@@ -1,0 +1,307 @@
+# French Financial Services Compliance Checklist
+# Includes: ACPR, CRD IV/CRR, LCB-FT/AMLD5, RGPD/CNIL, ISO 27001, DORA, NIS2
+
+checklist:
+  - reglementation: "ACPR – Gouvernance SI"
+    exigence: "Continuité (PRA/DRP)"
+    preuve: "Rapport PRA/DRP exécuté et validé"
+    controle: "Configurer Azure Backup & Recovery Vault et exécuter un test de restauration"
+    azure_resources:
+      - type: "Microsoft.RecoveryServices/vaults"
+        required: true
+        validation:
+          - property: "properties.backupPolicies"
+            check: "exists"
+      - type: "Microsoft.RecoveryServices/vaults/backupJobs"
+        validation:
+          - property: "properties.status"
+            check: "equals"
+            value: "Completed"
+
+  - reglementation: "ACPR – Gouvernance SI"
+    exigence: "Journalisation"
+    preuve: "Export des accès et actions admins"
+    controle: "Centraliser logs via Azure Monitor + Sentinel"
+    azure_resources:
+      - type: "Microsoft.OperationalInsights/workspaces"
+        required: true
+      - type: "Microsoft.SecurityInsights/solutions"
+        required: true
+        validation:
+          - property: "properties.provisioningState"
+            check: "equals"
+            value: "Succeeded"
+
+  - reglementation: "ACPR – Gouvernance SI"
+    exigence: "Gouvernance Cloud"
+    preuve: "Registre conformité déploiements"
+    controle: "Activer Azure Policy en mode Deny pour ressources critiques"
+    azure_resources:
+      - type: "Microsoft.Authorization/policyAssignments"
+        required: true
+        validation:
+          - property: "properties.enforcementMode"
+            check: "equals"
+            value: "Default"
+          - property: "properties.parameters"
+            check: "contains"
+            value: "Deny"
+
+  - reglementation: "CRD IV / CRR"
+    exigence: "Gestion incidents"
+    preuve: "Registre incidents sécurité"
+    controle: "Déployer Azure Sentinel pour collecter et corréler incidents"
+    azure_resources:
+      - type: "Microsoft.SecurityInsights/alertRules"
+        required: true
+        validation:
+          - property: "properties.enabled"
+            check: "equals"
+            value: true
+
+  - reglementation: "CRD IV / CRR"
+    exigence: "Disponibilité"
+    preuve: "Indicateurs SLA (99,95 % mini)"
+    controle: "Mettre en place Azure Monitor dashboards pour uptime apps"
+    azure_resources:
+      - type: "Microsoft.Insights/metricAlerts"
+        required: true
+        validation:
+          - property: "properties.enabled"
+            check: "equals"
+            value: true
+      - type: "Microsoft.Portal/dashboards"
+        validation:
+          - property: "properties.lenses"
+            check: "exists"
+
+  - reglementation: "CRD IV / CRR"
+    exigence: "Traçabilité"
+    preuve: "Logs horodatés inviolables"
+    controle: "Stocker journaux dans Azure Blob immuable (WORM)"
+    azure_resources:
+      - type: "Microsoft.Storage/storageAccounts/blobServices/containers"
+        required: true
+        validation:
+          - property: "properties.immutableStorageWithVersioning.enabled"
+            check: "equals"
+            value: true
+          - property: "properties.immutableStorageWithVersioning.immutabilityPolicy"
+            check: "exists"
+
+  - reglementation: "LCB-FT / AMLD5"
+    exigence: "KYC/KYB"
+    preuve: "Rapports KYC clients/garants"
+    controle: "Intégrer Dotfile/ComplyAdvantage aux workflows"
+    azure_resources:
+      - type: "Microsoft.Logic/workflows"
+        required: true
+        validation:
+          - property: "properties.state"
+            check: "equals"
+            value: "Enabled"
+    manual_verification: true
+    notes: "Verify integration with KYC/KYB provider (Dotfile/ComplyAdvantage)"
+
+  - reglementation: "LCB-FT / AMLD5"
+    exigence: "Screening sanctions"
+    preuve: "Export screening régulier"
+    controle: "Configurer logs AML dans Sentinel"
+    azure_resources:
+      - type: "Microsoft.OperationalInsights/workspaces/tables"
+        validation:
+          - property: "name"
+            check: "contains"
+            value: "AML"
+
+  - reglementation: "LCB-FT / AMLD5"
+    exigence: "Preuve audit AML"
+    preuve: "Preuve conservation logs AML ≥ 5 ans"
+    controle: "Stocker exports AML dans Storage immuable"
+    azure_resources:
+      - type: "Microsoft.Storage/storageAccounts"
+        required: true
+        validation:
+          - property: "properties.blobServices.containers.immutabilityPolicy.properties.immutabilityPeriodSinceCreationInDays"
+            check: "greaterThanOrEqual"
+            value: 1825  # 5 years
+
+  - reglementation: "RGPD / CNIL"
+    exigence: "Protection données"
+    preuve: "Certificat chiffrement DB"
+    controle: "Activer TDE (Transparent Data Encryption) sur SQL MI"
+    azure_resources:
+      - type: "Microsoft.Sql/managedInstances/databases"
+        required: true
+        validation:
+          - property: "properties.transparentDataEncryption.state"
+            check: "equals"
+            value: "Enabled"
+      - type: "Microsoft.Sql/servers/databases"
+        validation:
+          - property: "properties.transparentDataEncryption.state"
+            check: "equals"
+            value: "Enabled"
+
+  - reglementation: "RGPD / CNIL"
+    exigence: "Sécurité clés"
+    preuve: "Audit gestion clés"
+    controle: "Utiliser Azure Key Vault HSM pour clés sensibles"
+    azure_resources:
+      - type: "Microsoft.KeyVault/vaults"
+        required: true
+        validation:
+          - property: "properties.sku.name"
+            check: "equals"
+            value: "premium"
+          - property: "properties.enableSoftDelete"
+            check: "equals"
+            value: true
+          - property: "properties.enablePurgeProtection"
+            check: "equals"
+            value: true
+
+  - reglementation: "RGPD / CNIL"
+    exigence: "Souveraineté"
+    preuve: "Preuve hébergement UE"
+    controle: "Appliquer Azure Policy Allowed Locations (UE)"
+    azure_resources:
+      - type: "Microsoft.Authorization/policyAssignments"
+        required: true
+        validation:
+          - property: "properties.displayName"
+            check: "contains"
+            value: "Allowed locations"
+          - property: "properties.parameters.listOfAllowedLocations.value"
+            check: "containsAny"
+            value: ["westeurope", "northeurope", "francecentral", "francesouth", "germanywestcentral"]
+
+  - reglementation: "RGPD / CNIL"
+    exigence: "Traçabilité accès"
+    preuve: "Journal des accès utilisateurs"
+    controle: "Exporter Azure AD Sign-in logs"
+    azure_resources:
+      - type: "Microsoft.Insights/diagnosticSettings"
+        required: true
+        validation:
+          - property: "properties.logs"
+            check: "contains"
+            value: "SignInLogs"
+          - property: "properties.logs"
+            check: "contains"
+            value: "AuditLogs"
+
+  - reglementation: "ISO 27001 / SOC 2"
+    exigence: "Contrôles sécurité"
+    preuve: "Rapport audit sécurité"
+    controle: "Activer Blueprint ISO 27001 dans Azure Policy"
+    azure_resources:
+      - type: "Microsoft.Authorization/policyAssignments"
+        required: true
+        validation:
+          - property: "properties.policyDefinitionId"
+            check: "contains"
+            value: "ISO 27001"
+
+  - reglementation: "ISO 27001 / SOC 2"
+    exigence: "Preuves conformité"
+    preuve: "Tableau conformité automatique"
+    controle: "Brancher Delve/Scytale pour collecte des preuves"
+    azure_resources:
+      - type: "Microsoft.Security/assessments"
+        required: true
+    manual_verification: true
+    notes: "Verify integration with GRC tool (Delve/Scytale)"
+
+  - reglementation: "ISO 27001 / SOC 2"
+    exigence: "Détection incidents"
+    preuve: "Rapport Sentinel"
+    controle: "Configurer Sentinel alert rules"
+    azure_resources:
+      - type: "Microsoft.SecurityInsights/alertRules"
+        required: true
+        validation:
+          - property: "properties.enabled"
+            check: "equals"
+            value: true
+          - property: "kind"
+            check: "in"
+            value: ["Scheduled", "MicrosoftSecurityIncidentCreation"]
+
+  - reglementation: "DORA (2025)"
+    exigence: "Résilience IT"
+    preuve: "Rapport PRA/RPO/RTO"
+    controle: "Planifier Recovery Vault drills automatisés"
+    azure_resources:
+      - type: "Microsoft.RecoveryServices/vaults"
+        required: true
+        validation:
+          - property: "properties.redundancySettings.standardTierStorageRedundancy"
+            check: "equals"
+            value: "GeoRedundant"
+
+  - reglementation: "DORA (2025)"
+    exigence: "Cyber incidents"
+    preuve: "Registre incidents cyber"
+    controle: "Activer Sentinel incident reporting"
+    azure_resources:
+      - type: "Microsoft.SecurityInsights/incidents"
+        required: true
+        validation:
+          - property: "properties.status"
+            check: "exists"
+
+  - reglementation: "DORA (2025)"
+    exigence: "Réponse incidents"
+    preuve: "Preuves SOAR exécutés"
+    controle: "Créer Logic Apps / Runbooks (SOAR) pour réponse auto"
+    azure_resources:
+      - type: "Microsoft.Logic/workflows"
+        required: true
+        validation:
+          - property: "properties.state"
+            check: "equals"
+            value: "Enabled"
+      - type: "Microsoft.Automation/automationAccounts/runbooks"
+        validation:
+          - property: "properties.state"
+            check: "equals"
+            value: "Published"
+
+  - reglementation: "NIS2 (2024/25)"
+    exigence: "Inventaire actifs"
+    preuve: "Export inventaire ressources"
+    controle: "Générer inventaire via Azure Resource Graph"
+    azure_resources:
+      - type: "Microsoft.ResourceGraph/queries"
+        validation:
+          - property: "properties.query"
+            check: "exists"
+    validation_query: "Resources | project name, type, location, tags"
+
+  - reglementation: "NIS2 (2024/25)"
+    exigence: "Gestion vulnérabilités"
+    preuve: "Rapport vulnérabilités VMs/containers"
+    controle: "Scanner via Defender for Cloud + Defender for Containers"
+    azure_resources:
+      - type: "Microsoft.Security/pricings"
+        required: true
+        validation:
+          - property: "properties.pricingTier"
+            check: "equals"
+            value: "Standard"
+          - property: "name"
+            check: "in"
+            value: ["VirtualMachines", "Containers"]
+
+  - reglementation: "NIS2 (2024/25)"
+    exigence: "Risk Management"
+    preuve: "Dashboard conformité cybersécurité"
+    controle: "Activer Defender for Cloud Regulatory Compliance"
+    azure_resources:
+      - type: "Microsoft.Security/regulatoryComplianceStandards"
+        required: true
+        validation:
+          - property: "properties.state"
+            check: "equals"
+            value: "Enabled"

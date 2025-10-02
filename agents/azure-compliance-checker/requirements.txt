@@ -1,0 +1,20 @@
+# Azure Compliance Checker Agent - Specific Dependencies
+
+# Core dependencies (from parent requirements.txt)
+claude-agent-sdk>=0.1.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Azure SDK dependencies (optional - uses Azure CLI by default)
+azure-identity>=1.15.0
+azure-mgmt-resource>=23.0.0
+azure-mgmt-authorization>=4.0.0
+azure-mgmt-security>=6.0.0
+azure-mgmt-operationalinsights>=13.0.0
+
+# Report generation
+markdown>=3.5.0
+
+# Utilities
+requests>=2.31.0
