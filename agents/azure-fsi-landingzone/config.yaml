@@ -102,6 +102,172 @@ azure:
     # Hub-spoke topology
     topology: "hub-spoke"
 
+    # Ring-based deployment strategy
+    # Allows progressive deployment of landing zone components
+    deployment_rings:
+      # Ring 0: Foundation - Core FSI Compliance (MANDATORY)
+      ring0_foundation:
+        description: "Core FSI compliance layer - mandatory for all deployments"
+        deployment_order: 1
+        mandatory: true
+        depth: "standard"  # minimal, standard, advanced
+
+        components:
+          network_core:
+            - component: "hub-vnet"
+              mandatory: true
+            - component: "azure-firewall"
+              mandatory: true
+            - component: "vpn-gateway"
+              mandatory: false  # Optional for advanced
+            - component: "ddos-protection"
+              mandatory: true
+            - component: "private-dns-zones"
+              mandatory: true
+
+          security_core:
+            - component: "key-vault-core"
+              mandatory: true
+            - component: "azure-bastion"
+              mandatory: true
+            - component: "network-security-groups"
+              mandatory: true
+
+          governance_core:
+            - component: "management-groups"
+              mandatory: true
+            - component: "azure-policies"
+              mandatory: true
+              policies:
+                - "GDPR"
+                - "DORA"
+                - "EBA_GL"
+                - "data-residency"
+                - "encryption-at-rest"
+
+          monitoring_core:
+            - component: "log-analytics-workspace"
+              mandatory: true
+            - component: "defender-for-cloud"
+              mandatory: true
+            - component: "diagnostic-settings"
+              mandatory: true
+
+          identity_core:
+            - component: "entra-id-baseline"
+              mandatory: true
+            - component: "privileged-identity-management"
+              mandatory: true
+            - component: "conditional-access-policies"
+              mandatory: true
+
+      # Ring 1: Platform Services - DevOps & Shared Infrastructure
+      ring1_platform:
+        description: "Platform services for DevOps, CI/CD, and shared services"
+        deployment_order: 2
+        mandatory: false
+        depth: "standard"  # minimal, standard, advanced
+        depends_on: ["ring0_foundation"]
+
+        components:
+          devops_infrastructure:
+            - component: "container-registry"
+              mandatory: true
+            - component: "devops-project"
+              mandatory: false  # Azure DevOps or GitHub
+            - component: "artifact-storage"
+              mandatory: true
+
+          cicd_infrastructure:
+            - component: "build-agents-subnet"
+              mandatory: true
+            - component: "self-hosted-agents"
+              mandatory: false
+            - component: "deployment-pipelines"
+              mandatory: false  # Templates only
+
+          shared_services:
+            - component: "shared-key-vault"
+              mandatory: true
+            - component: "shared-storage-account"
+              mandatory: true
+            - component: "api-management"
+              mandatory: false  # Advanced only
+
+          admin_infrastructure:
+            - component: "admin-vnet"
+              mandatory: false
+            - component: "jump-boxes"
+              mandatory: false
+            - component: "privileged-workstations"
+              mandatory: false  # Advanced only
+
+      # Ring 2: Workload Infrastructure - Application Components
+      ring2_workload:
+        description: "Workload infrastructure for hosting applications (IaaS/PaaS/CaaS)"
+        deployment_order: 3
+        mandatory: false
+        depth: "minimal"  # minimal, standard, advanced
+        depends_on: ["ring0_foundation"]  # Can be deployed without Ring 1
+
+        components:
+          compute_services:
+            - component: "spoke-vnet-app"
+              mandatory: true
+            - component: "app-service-plan"
+              mandatory: false
+            - component: "aks-cluster"
+              mandatory: false
+            - component: "virtual-machines"
+              mandatory: false
+            - component: "azure-functions"
+              mandatory: false
+
+          data_services:
+            - component: "sql-database"
+              mandatory: false
+            - component: "cosmos-db"
+              mandatory: false
+            - component: "storage-accounts"
+              mandatory: true
+            - component: "data-lake"
+              mandatory: false
+
+          integration_services:
+            - component: "service-bus"
+              mandatory: false
+            - component: "event-grid"
+              mandatory: false
+            - component: "logic-apps"
+              mandatory: false
+            - component: "api-connections"
+              mandatory: false
+
+          frontend_services:
+            - component: "application-gateway"
+              mandatory: false
+            - component: "front-door"
+              mandatory: false
+            - component: "cdn"
+              mandatory: false
+
+      # Deployment depth definitions
+      depth_profiles:
+        minimal:
+          description: "Essential components only - quickstart deployment"
+          include_optional: false
+          components_filter: "mandatory_only"
+
+        standard:
+          description: "Recommended components for production FSI workloads"
+          include_optional: true
+          components_filter: "mandatory_and_recommended"
+
+        advanced:
+          description: "All components including advanced features"
+          include_optional: true
+          components_filter: "all"
+
     # Hub configuration
     hub:
       vnet_address_space: "10.0.0.0/16"

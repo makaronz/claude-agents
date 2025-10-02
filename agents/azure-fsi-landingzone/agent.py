@@ -56,6 +56,11 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
         # Project name for organizing generated assets
         self.project_name: Optional[str] = None
 
+        # Ring-based deployment tracking
+        self.deployment_rings = self.azure_config.get('architecture', {}).get('deployment_rings', {})
+        self.selected_rings: List[str] = []  # Rings to deploy
+        self.ring_depth: str = "standard"  # minimal, standard, advanced
+
     def get_project_dir(self) -> Path:
         """
         Get the project directory for storing generated assets.
@@ -110,6 +115,10 @@ and ensure best practices are followed for financial services workloads in Azure
         """Get custom tools for this agent."""
         return [
             self.set_project_name,
+            self.list_deployment_rings,
+            self.select_deployment_rings,
+            self.set_ring_depth,
+            self.generate_ring_deployment,
             self.check_azure_prerequisites,
             self.validate_azure_auth,
             self.get_fsi_compliance_requirements,
@@ -156,6 +165,414 @@ and ensure best practices are followed for financial services workloads in Azure
                 {"type": "text", "text": result_text}
             ]
         }
+
+    @tool("list_deployment_rings", "List available deployment rings and their components", {})
+    async def list_deployment_rings(self, args):
+        """List all available deployment rings with their components."""
+        if not self.deployment_rings:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ No deployment rings configured in config.yaml"}
+                ]
+            }
+
+        rings_text = "🎯 Available Deployment Rings for FSI Landing Zone:\n\n"
+        rings_text += "Deploy your landing zone progressively using a ring-based approach.\n"
+        rings_text += "Each ring contains specific components and can be deployed independently.\n\n"
+
+        # Sort rings by deployment order
+        sorted_rings = sorted(
+            [(name, data) for name, data in self.deployment_rings.items() if name != 'depth_profiles'],
+            key=lambda x: x[1].get('deployment_order', 999)
+        )
+
+        for ring_name, ring_data in sorted_rings:
+            rings_text += f"{'=' * 80}\n"
+            rings_text += f"📦 {ring_name.upper().replace('_', ' ')}\n"
+            rings_text += f"{'=' * 80}\n"
+            rings_text += f"Description: {ring_data.get('description', 'N/A')}\n"
+            rings_text += f"Order: {ring_data.get('deployment_order', 'N/A')}\n"
+            rings_text += f"Mandatory: {'✅ Yes' if ring_data.get('mandatory') else '⚠️  Optional'}\n"
+            rings_text += f"Default Depth: {ring_data.get('depth', 'standard')}\n"
+
+            if ring_data.get('depends_on'):
+                rings_text += f"Dependencies: {', '.join(ring_data['depends_on'])}\n"
+
+            rings_text += f"\nComponents:\n"
+
+            components = ring_data.get('components', {})
+            for category, items in components.items():
+                rings_text += f"\n  🔷 {category.replace('_', ' ').title()}:\n"
+                for item in items:
+                    component_name = item.get('component', 'unknown')
+                    is_mandatory = item.get('mandatory', False)
+                    status = "✓" if is_mandatory else "○"
+                    rings_text += f"    {status} {component_name}\n"
+
+                    # Show policies if available
+                    if 'policies' in item:
+                        for policy in item['policies']:
+                            rings_text += f"        ├─ Policy: {policy}\n"
+
+            rings_text += "\n"
+
+        # Show depth profiles
+        depth_profiles = self.deployment_rings.get('depth_profiles', {})
+        if depth_profiles:
+            rings_text += f"{'=' * 80}\n"
+            rings_text += "📊 DEPLOYMENT DEPTH PROFILES\n"
+            rings_text += f"{'=' * 80}\n\n"
+            for depth_name, depth_data in depth_profiles.items():
+                rings_text += f"🎚️  {depth_name.upper()}\n"
+                rings_text += f"   {depth_data.get('description', 'N/A')}\n"
+                rings_text += f"   Filter: {depth_data.get('components_filter', 'N/A')}\n\n"
+
+        rings_text += "\n💡 Usage:\n"
+        rings_text += "   1. Use select_deployment_rings to choose which rings to deploy\n"
+        rings_text += "   2. Use set_ring_depth to choose deployment depth (minimal/standard/advanced)\n"
+        rings_text += "   3. Use generate_ring_deployment to generate all templates for selected rings\n"
+
+        return {
+            "content": [
+                {"type": "text", "text": rings_text}
+            ]
+        }
+
+    @tool("select_deployment_rings", "Select which deployment rings to deploy", {"rings": str})
+    async def select_deployment_rings(self, args):
+        """
+        Select deployment rings to deploy.
+        Args:
+            rings: Comma-separated list of rings (e.g., "ring0_foundation,ring1_platform")
+                   or "all" to select all rings
+        """
+        rings_input = args.get("rings", "").strip()
+
+        if not rings_input:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Please specify rings to deploy (comma-separated) or 'all'"}
+                ]
+            }
+
+        # Get valid ring names (exclude depth_profiles)
+        valid_rings = [name for name in self.deployment_rings.keys() if name != 'depth_profiles']
+
+        if rings_input.lower() == "all":
+            self.selected_rings = valid_rings
+        else:
+            selected = [r.strip() for r in rings_input.split(',')]
+            invalid_rings = [r for r in selected if r not in valid_rings]
+
+            if invalid_rings:
+                return {
+                    "content": [
+                        {"type": "text", "text": f"❌ Invalid rings: {', '.join(invalid_rings)}\n\nValid rings: {', '.join(valid_rings)}"}
+                    ]
+                }
+
+            self.selected_rings = selected
+
+        # Check dependencies
+        result_text = f"✅ Selected deployment rings:\n\n"
+        for ring_name in self.selected_rings:
+            ring_data = self.deployment_rings.get(ring_name, {})
+            result_text += f"   ✓ {ring_name}\n"
+            result_text += f"     └─ {ring_data.get('description', 'N/A')}\n"
+
+            # Check dependencies
+            depends_on = ring_data.get('depends_on', [])
+            if depends_on:
+                result_text += f"     └─ Requires: {', '.join(depends_on)}\n"
+                missing_deps = [dep for dep in depends_on if dep not in self.selected_rings]
+                if missing_deps:
+                    result_text += f"     ⚠️  Warning: Missing dependencies: {', '.join(missing_deps)}\n"
+
+        result_text += f"\n📊 Current depth: {self.ring_depth}\n"
+        result_text += "\n💡 Use generate_ring_deployment to create templates for these rings.\n"
+
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
+
+    @tool("set_ring_depth", "Set deployment depth for rings (minimal/standard/advanced)", {"depth": str})
+    async def set_ring_depth(self, args):
+        """Set the deployment depth for ring-based deployments."""
+        depth = args.get("depth", "").strip().lower()
+
+        valid_depths = ["minimal", "standard", "advanced"]
+        if depth not in valid_depths:
+            return {
+                "content": [
+                    {"type": "text", "text": f"❌ Invalid depth. Choose from: {', '.join(valid_depths)}"}
+                ]
+            }
+
+        self.ring_depth = depth
+
+        depth_profiles = self.deployment_rings.get('depth_profiles', {})
+        depth_info = depth_profiles.get(depth, {})
+
+        result_text = f"✅ Deployment depth set to: {depth.upper()}\n\n"
+        result_text += f"📋 Description: {depth_info.get('description', 'N/A')}\n"
+        result_text += f"🔧 Components filter: {depth_info.get('components_filter', 'N/A')}\n"
+        result_text += f"➕ Include optional: {'Yes' if depth_info.get('include_optional') else 'No'}\n"
+
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
+
+    @tool("generate_ring_deployment", "Generate all deployment templates for selected rings", {})
+    async def generate_ring_deployment(self, args):
+        """Generate deployment templates for all selected rings."""
+        if not self.selected_rings:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ No rings selected. Use select_deployment_rings first."}
+                ]
+            }
+
+        # Get project directory
+        try:
+            project_dir = self.get_project_dir()
+        except ValueError:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Please set a project name first using set_project_name tool."}
+                ]
+            }
+
+        result_text = f"🚀 Generating deployment templates for selected rings...\n\n"
+        result_text += f"Project: {self.project_name}\n"
+        result_text += f"Depth: {self.ring_depth}\n"
+        result_text += f"Rings: {', '.join(self.selected_rings)}\n\n"
+
+        generated_files = []
+        components_by_ring = {}
+
+        # Process each selected ring
+        for ring_name in sorted(self.selected_rings, key=lambda r: self.deployment_rings.get(r, {}).get('deployment_order', 999)):
+            ring_data = self.deployment_rings.get(ring_name, {})
+            ring_dir = project_dir / ring_name
+            ring_dir.mkdir(parents=True, exist_ok=True)
+
+            result_text += f"\n📦 {ring_name.upper().replace('_', ' ')}:\n"
+
+            components = ring_data.get('components', {})
+            ring_components = []
+
+            for category, items in components.items():
+                for item in items:
+                    component_name = item.get('component', 'unknown')
+                    is_mandatory = item.get('mandatory', False)
+
+                    # Filter based on depth
+                    should_include = False
+                    if self.ring_depth == "minimal":
+                        should_include = is_mandatory
+                    elif self.ring_depth == "standard":
+                        should_include = True  # Include all in standard
+                    elif self.ring_depth == "advanced":
+                        should_include = True  # Include all in advanced
+
+                    if should_include:
+                        ring_components.append({
+                            'name': component_name,
+                            'category': category,
+                            'mandatory': is_mandatory
+                        })
+
+            components_by_ring[ring_name] = ring_components
+
+            # Generate a summary file for this ring
+            summary_path = ring_dir / "DEPLOYMENT.md"
+            summary_content = self._generate_ring_summary(ring_name, ring_data, ring_components)
+
+            with open(summary_path, 'w') as f:
+                f.write(summary_content)
+
+            generated_files.append(str(summary_path))
+            result_text += f"   ✓ Generated: {summary_path.name}\n"
+
+            # Generate component placeholders
+            for comp in ring_components:
+                comp_file = ring_dir / f"{comp['name']}.bicep"
+                if not comp_file.exists():
+                    placeholder = f"// {comp['name']} - {category}\n// TODO: Implement component\n"
+                    with open(comp_file, 'w') as f:
+                        f.write(placeholder)
+                    result_text += f"   ○ Created placeholder: {comp['name']}.bicep\n"
+
+        # Generate main deployment script
+        main_deploy_path = project_dir / "deploy.sh"
+        deploy_script = self._generate_deployment_script(components_by_ring)
+
+        with open(main_deploy_path, 'w') as f:
+            f.write(deploy_script)
+        main_deploy_path.chmod(0o755)  # Make executable
+
+        generated_files.append(str(main_deploy_path))
+
+        result_text += f"\n✅ Generated {len(generated_files)} files\n"
+        result_text += f"📁 Output directory: {project_dir}\n"
+        result_text += f"\n💡 Next steps:\n"
+        result_text += f"   1. Review generated templates in each ring folder\n"
+        result_text += f"   2. Customize components as needed\n"
+        result_text += f"   3. Run ./deploy.sh to deploy rings sequentially\n"
+
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
+
+    def _generate_ring_summary(self, ring_name: str, ring_data: dict, components: list) -> str:
+        """Generate deployment summary for a ring."""
+        summary = f"# {ring_name.upper().replace('_', ' ')} - Deployment Guide\n\n"
+        summary += f"**Description**: {ring_data.get('description', 'N/A')}\n\n"
+        summary += f"**Deployment Order**: {ring_data.get('deployment_order', 'N/A')}\n\n"
+        summary += f"**Mandatory**: {'Yes' if ring_data.get('mandatory') else 'No'}\n\n"
+
+        if ring_data.get('depends_on'):
+            summary += f"**Dependencies**: {', '.join(ring_data['depends_on'])}\n\n"
+
+        summary += "## Components\n\n"
+        summary += f"Total components in this ring: {len(components)}\n\n"
+
+        # Group by category
+        by_category = {}
+        for comp in components:
+            category = comp['category']
+            if category not in by_category:
+                by_category[category] = []
+            by_category[category].append(comp)
+
+        for category, items in by_category.items():
+            summary += f"### {category.replace('_', ' ').title()}\n\n"
+            for item in items:
+                status = "**[MANDATORY]**" if item['mandatory'] else "[Optional]"
+                summary += f"- {status} `{item['name']}`\n"
+            summary += "\n"
+
+        summary += "## Deployment\n\n"
+        summary += "```bash\n"
+        summary += f"# Deploy {ring_name}\n"
+        summary += "az deployment sub create \\\n"
+        summary += f"  --location francecentral \\\n"
+        summary += f"  --template-file main.bicep \\\n"
+        summary += f"  --parameters @main.parameters.json\n"
+        summary += "```\n\n"
+
+        summary += "## Validation\n\n"
+        summary += "```bash\n"
+        summary += f"# Validate {ring_name} before deployment\n"
+        summary += "az deployment sub validate \\\n"
+        summary += f"  --location francecentral \\\n"
+        summary += f"  --template-file main.bicep \\\n"
+        summary += f"  --parameters @main.parameters.json\n"
+        summary += "```\n"
+
+        return summary
+
+    def _generate_deployment_script(self, components_by_ring: dict) -> str:
+        """Generate main deployment script for all rings."""
+        script = """#!/bin/bash
+# FSI Landing Zone - Ring-based Deployment Script
+# Generated by Azure FSI Landing Zone Agent
+
+set -e  # Exit on error
+set -u  # Exit on undefined variable
+
+# Colors for output
+RED='\\033[0;31m'
+GREEN='\\033[0;32m'
+YELLOW='\\033[1;33m'
+NC='\\033[0m' # No Color
+
+# Function to log messages
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check prerequisites
+log_info "Checking prerequisites..."
+if ! command -v az &> /dev/null; then
+    log_error "Azure CLI not found. Please install it first."
+    exit 1
+fi
+
+if ! az account show &> /dev/null; then
+    log_error "Not authenticated to Azure. Please run 'az login' first."
+    exit 1
+fi
+
+# Get current subscription
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+log_info "Using subscription: $SUBSCRIPTION_ID"
+
+# Deployment region
+LOCATION="${AZURE_LOCATION:-francecentral}"
+log_info "Deployment region: $LOCATION"
+
+"""
+
+        # Add deployment functions for each ring
+        sorted_rings = sorted(components_by_ring.items(), key=lambda x: len(x[0]))
+
+        for ring_name, components in sorted_rings:
+            script += f"""
+# Deploy {ring_name}
+deploy_{ring_name}() {{
+    log_info "Deploying {ring_name}..."
+
+    # TODO: Add actual deployment logic here
+    # Example:
+    # az deployment sub create \\
+    #   --location $LOCATION \\
+    #   --template-file {ring_name}/main.bicep \\
+    #   --parameters @{ring_name}/main.parameters.json
+
+    log_info "{ring_name} deployment completed"
+}}
+
+"""
+
+        # Add main deployment logic
+        script += """
+# Main deployment flow
+main() {
+    log_info "Starting FSI Landing Zone deployment..."
+    log_info "================================================"
+
+"""
+
+        for ring_name, _ in sorted_rings:
+            script += f"""    log_info "Step: {ring_name}"
+    deploy_{ring_name}
+
+"""
+
+        script += """    log_info "================================================"
+    log_info "All rings deployed successfully!"
+}
+
+# Run main deployment
+main
+"""
+
+        return script
 
     @tool("check_azure_prerequisites", "Check if Azure CLI and required tools are installed", {})
     async def check_azure_prerequisites(self, args):

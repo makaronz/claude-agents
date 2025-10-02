@@ -74,10 +74,51 @@ This agent uses **Bicep with Azure Verified Modules (AVM)** as the primary Infra
 
 **Recommendation**: Use **Bicep + AVM** (current implementation) for FSI Landing Zones on Azure.
 
+## 🎯 Ring-Based Deployment Architecture (New!)
+
+This agent now supports a **progressive, ring-based deployment strategy** for better organization and control:
+
+### 📦 Ring 0: Foundation (Core FSI Compliance)
+**Mandatory** | Deployment Order: 1
+
+The compliance and security baseline for all FSI deployments:
+- Network Core: Hub VNet, Azure Firewall, DDoS Protection
+- Security Core: Key Vault, Bastion, NSGs
+- Governance Core: Azure Policies (GDPR, DORA, EBA GL)
+- Monitoring Core: Log Analytics, Defender for Cloud
+- Identity Core: Entra ID, PIM, Conditional Access
+
+### 📦 Ring 1: Platform Services (DevOps & Shared)
+**Optional** | Deployment Order: 2 | Depends on: Ring 0
+
+DevOps tooling and shared infrastructure:
+- DevOps: Container Registry, Build Agents, Artifacts
+- Shared Services: Shared Key Vault, Storage, APIM
+- Admin Infrastructure: Admin VNet, Jump Boxes
+
+### 📦 Ring 2: Workload Infrastructure (Applications)
+**Optional** | Deployment Order: 3 | Depends on: Ring 0
+
+Infrastructure for hosting applications (IaaS/PaaS/CaaS):
+- Compute: App Service, AKS, VMs, Functions
+- Data: SQL DB, Cosmos DB, Storage, Data Lake
+- Integration: Service Bus, Event Grid, Logic Apps
+- Frontend: Application Gateway, Front Door, CDN
+
+### 🎚️ Deployment Depth Profiles
+
+Choose your deployment depth:
+- **Minimal**: Essential components only (POC, testing)
+- **Standard**: Recommended for production (default)
+- **Advanced**: All components including optional features
+
+📖 **[Full Ring Architecture Documentation](./RING-ARCHITECTURE.md)**
+
 ## Features
 
 ### 🏦 FSI-Specific Architecture
 - Hub-spoke network topology optimized for financial services
+- Ring-based progressive deployment for better control
 - Secure network segmentation (application, data, management tiers)
 - Azure Firewall Premium for advanced threat protection
 - VPN Gateway and Azure Bastion for secure connectivity
