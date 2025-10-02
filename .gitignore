@@ -84,12 +84,13 @@ agents/*/.env
 
 # Azure FSI Landing Zone - Generated project directories
 # These are created by the agent based on user project names
-# Exclude specific test/example projects if needed
+# Pattern: agents/azure-fsi-landingzone/{project-name}/
+# Keeps: .md, .py, .yaml files and logs/ directory
 agents/azure-fsi-landingzone/*/
-!agents/azure-fsi-landingzone/templates/
 !agents/azure-fsi-landingzone/*.md
 !agents/azure-fsi-landingzone/*.py
 !agents/azure-fsi-landingzone/*.yaml
+!agents/azure-fsi-landingzone/logs/
 
 # MCP specific
 mcp_servers/
