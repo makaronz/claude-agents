@@ -280,7 +280,7 @@ Agent: ✅ Control validated
 ```markdown
 # Azure Compliance Report
 
-**Generated**: 2025-01-02 14:30:00
+**Generated**: 2025-10-02 14:30:00
 
 ## Executive Summary
 

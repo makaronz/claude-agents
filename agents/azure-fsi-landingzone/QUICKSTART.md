@@ -250,7 +250,7 @@ param environment string = 'prod'
 
 📄 File: fsi-deployment-plan_20250102_143022.md
 📊 Format: MARKDOWN
-📅 Generated: 2025-01-02 14:30:22
+📅 Generated: 2025-10-02 14:30:22
 
 The plan includes:
 • Architecture overview

@@ -74,7 +74,7 @@ python agent.py
 💬 You: Validate all controls
 
 🤖 Claude: 🔍 Validating All Controls (24 total)
-Started: 2025-01-02 14:30:00
+Started: 2025-10-02 14:30:00
 ================================================================================
 
 Control #1: ACPR – Gouvernance SI - Continuité (PRA/DRP): PASSED
@@ -100,7 +100,7 @@ Control #24: NIS2 (2024/25) - Risk Management: PASSED
 🤖 Claude: ✅ Compliance report generated:
 
 📄 File: reports/compliance_report_20250102_143045.md
-📅 Date: 2025-01-02 14:30:45
+📅 Date: 2025-10-02 14:30:45
 📊 Controls: 24
 
 Summary:
@@ -133,7 +133,7 @@ Summary:
 
 📄 File: reports/audit_report_20250102_143100.json
 📊 Format: JSON
-📅 Date: 2025-01-02 14:31:00
+📅 Date: 2025-10-02 14:31:00
 
 💬 You: quit
 

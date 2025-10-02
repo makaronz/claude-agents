@@ -10,7 +10,7 @@ This agent helps financial institutions deploy compliant, secure Azure infrastru
 - **Azure Verified Modules (AVM)**: Production-ready, Microsoft-validated infrastructure modules
 - **European Compliance**: Built-in policies for GDPR, DORA, PSD2, MiFID II, and EBA Guidelines
 
-## 📌 Technology Stack Decision (January 2025)
+## 📌 Technology Stack Decision (October 2025)
 
 ### Why Bicep + AVM (Not Terraform ALZ)?
 
@@ -220,8 +220,9 @@ Agent: [Generates comprehensive deployment plan document]
 
 ## Agent Capabilities
 
-### Custom Tools
+### Custom Tools (15 total)
 
+#### Infrastructure & Prerequisites
 1. **check_azure_prerequisites**
    - Validates Azure CLI installation
    - Checks Bicep availability
@@ -233,6 +234,7 @@ Agent: [Generates comprehensive deployment plan document]
    - Lists available subscriptions
    - Displays user/service principal info
 
+#### Compliance & Requirements
 3. **get_fsi_compliance_requirements**
    - Details European regulations (GDPR, DORA, PSD2, MiFID II, EBA)
    - Lists Azure controls for each regulation
@@ -284,6 +286,38 @@ Agent: [Generates comprehensive deployment plan document]
     - Includes architecture diagrams
     - Lists deployment steps
     - Documents security controls
+
+#### Identity & Access Management (NEW)
+12. **generate_bastion_template**
+    - Creates Azure Bastion Bicep template
+    - Standard SKU with tunneling support
+    - 365-day audit log retention
+    - IP connect and native client support
+
+13. **configure_entra_id**
+    - Entra ID (Azure AD) configuration guidance
+    - MFA enablement for all users
+    - Sign-in and audit log export
+    - Password policy for FSI requirements
+    - B2B collaboration settings
+
+14. **deploy_conditional_access**
+    - Generates 5 Conditional Access policies:
+      - Require MFA for all users
+      - Block non-EU locations
+      - Require compliant devices for admins
+      - Block legacy authentication
+      - App protection for mobile devices
+    - Compliance mapping to PSD2, GDPR, DORA
+    - Microsoft Graph API deployment scripts
+
+15. **setup_pim_roles**
+    - Privileged Identity Management configuration
+    - Critical role identification (Global Admin, Security Admin, etc.)
+    - PIM activation settings (MFA, approval, duration)
+    - Break-glass account setup guidance
+    - PowerShell configuration scripts
+    - Compliance mapping to DORA, ISO 27001, NIS2
 
 ## Configuration
 
