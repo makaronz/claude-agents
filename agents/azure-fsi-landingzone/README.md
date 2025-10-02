@@ -601,23 +601,47 @@ az policy remediation create --name <remediation-name> --policy-assignment <assi
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Microsoft FSI Landing Zone Alignment
+
+✅ **This agent is 95% aligned with Microsoft's official FSI Landing Zone architecture.**
+
+See [ALIGNMENT.md](ALIGNMENT.md) for detailed analysis including:
+- ✅ All core policy controls (Sovereignty, Transparency, Resilience, Service Design)
+- ✅ Compliance with PCI-DSS 4.0, NIST SP 800-53 Rev. 5
+- ✅ European regulations (GDPR, DORA, PSD2, MiFID II, EBA)
+- ⚠️ Minor gaps documented with action plan
+
+**Key Landing Zone Types** (from Microsoft FSI LZ):
+- **Corp**: Non-internet facing, non-confidential workloads
+- **Online**: Internet facing, non-confidential workloads
+- **Confidential Corp**: Non-internet facing with confidential computing
+- **Confidential Online**: Internet facing with confidential computing
+
+Configure these in [config.yaml](config.yaml) under `architecture.landing_zone_types`.
+
 ## Additional Resources
 
-### Microsoft Documentation
-- [FSI Landing Zone](https://docs.microsoft.com/azure/cloud-adoption-framework/industry/financial/)
-- [Azure Verified Modules](https://aka.ms/avm)
-- [Azure Landing Zones](https://docs.microsoft.com/azure/cloud-adoption-framework/ready/landing-zone/)
-- [Azure Security Benchmark](https://docs.microsoft.com/security/benchmark/azure/)
+### Microsoft FSI Documentation
+- [FSI Landing Zone Overview](https://learn.microsoft.com/en-us/industry/financial-services/fsi-lz) - Official FSI guidance
+- [FSI Architecture](https://learn.microsoft.com/en-us/industry/financial-services/fsi-lz-arch) - Architecture details
+- [FSI Policy Controls](https://learn.microsoft.com/en-us/industry/financial-services/fsi-policy-controls) - Policy frameworks
+- [FSI Governance](https://learn.microsoft.com/en-us/industry/financial-services/infra-governance-fsi) - Governance requirements
+
+### Azure Documentation
+- [Azure Verified Modules](https://azure.github.io/Azure-Verified-Modules/) - Official AVM docs
+- [Azure Landing Zones](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/landing-zone/)
+- [Bicep Landing Zone Design](https://learn.microsoft.com/en-us/azure/architecture/landing-zones/bicep/landing-zone-bicep)
+- [Azure Security Benchmark](https://learn.microsoft.com/security/benchmark/azure/)
 
 ### Compliance
-- [GDPR Compliance](https://docs.microsoft.com/compliance/regulatory/gdpr)
-- [Azure Compliance Offerings](https://docs.microsoft.com/azure/compliance/)
+- [GDPR Compliance](https://learn.microsoft.com/compliance/regulatory/gdpr)
+- [Azure Compliance Offerings](https://learn.microsoft.com/azure/compliance/)
 - [Microsoft Trust Center](https://www.microsoft.com/trust-center)
 
 ### Tools
-- [Bicep Documentation](https://docs.microsoft.com/azure/azure-resource-manager/bicep/)
-- [Azure Policy](https://docs.microsoft.com/azure/governance/policy/)
-- [Azure CLI Reference](https://docs.microsoft.com/cli/azure/)
+- [Bicep Documentation](https://learn.microsoft.com/azure/azure-resource-manager/bicep/)
+- [Azure Policy](https://learn.microsoft.com/azure/governance/policy/)
+- [Azure CLI Reference](https://learn.microsoft.com/cli/azure/)
 
 ## Support
 

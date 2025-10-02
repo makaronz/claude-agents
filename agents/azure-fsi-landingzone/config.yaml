@@ -65,6 +65,11 @@ azure:
       - "GDPR"
       - "PCI_DSS_v4"
 
+    # Optional policy initiatives (enable as needed)
+    # Uncomment for payment institutions requiring SWIFT compliance
+    policy_initiatives_optional:
+      # - "SWIFT_CSP_CSCF_v2022"  # For payment institutions only
+
     # Custom policies for European FSI
     custom_policies:
       data_residency:
@@ -114,7 +119,54 @@ azure:
         - "bastion"
         - "ddos-protection"
 
-    # Spoke configuration template
+    # Landing Zone Types (Microsoft FSI LZ)
+    # Configure spoke policies based on workload type:
+    # - Corp: Non-internet facing, non-confidential workloads
+    # - Online: Internet facing, non-confidential workloads
+    # - Confidential Corp: Non-internet facing, confidential computing
+    # - Confidential Online: Internet facing, confidential computing
+    landing_zone_types:
+      corp:
+        description: "Non-internet facing, non-confidential workloads"
+        internet_facing: false
+        confidential_computing: false
+        policies:
+          - "deny-public-ip"
+          - "require-private-endpoints"
+          - "standard-encryption"
+
+      online:
+        description: "Internet facing, non-confidential workloads"
+        internet_facing: true
+        confidential_computing: false
+        policies:
+          - "require-waf"
+          - "require-ddos-protection"
+          - "standard-encryption"
+
+      confidential_corp:
+        description: "Non-internet facing, confidential computing"
+        internet_facing: false
+        confidential_computing: true
+        policies:
+          - "deny-public-ip"
+          - "require-private-endpoints"
+          - "require-confidential-vms"
+          - "require-cmk"
+          - "require-double-encryption"
+
+      confidential_online:
+        description: "Internet facing, confidential computing"
+        internet_facing: true
+        confidential_computing: true
+        policies:
+          - "require-waf"
+          - "require-ddos-protection"
+          - "require-confidential-vms"
+          - "require-cmk"
+          - "require-double-encryption"
+
+    # Spoke configuration template (generic - customize per LZ type)
     spoke_template:
       vnet_address_space: "10.1.0.0/16"
       subnets:
