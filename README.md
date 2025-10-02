@@ -70,10 +70,13 @@ claude-agents/
 
 ## Requirements
 
-- Python 3.10+
-- Node.js (for Claude Code CLI)
-- Claude Agent SDK: `pip install claude-agent-sdk`
-- Anthropic API key
+- **Python 3.10+**
+- **Node.js 18+** (for Claude Code CLI)
+- **Claude Code CLI v2.0.1+**: `npm install -g @anthropic-ai/claude-code@latest` ⚠️ **REQUIRED**
+- **Claude Agent SDK v0.1.0+**: `pip install claude-agent-sdk>=0.1.0`
+- **Anthropic API key** (from https://console.anthropic.com)
+
+**Important**: Claude Code CLI v2.0.1+ is required for the claude-agent-sdk to work. Version 1.x is not compatible.
 
 ## Key Components
 

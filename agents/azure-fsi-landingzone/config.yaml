@@ -41,11 +41,11 @@ azure:
       - "avm/res/management/management-group"
 
     # Default region for deployments
-    default_region: "westeurope"
+    default_region: "francecentral"
 
     # Naming convention
-    naming_prefix: "fsi"
-    environment: "prod"  # prod, dev, test
+    naming_prefix: "cl-fsi"
+    environment: "dev"  # prod, dev, test
 
   # Compliance and policy configuration
   compliance:
@@ -53,8 +53,8 @@ azure:
     regulations:
       - "GDPR"          # General Data Protection Regulation
       - "DORA"          # Digital Operational Resilience Act
-      - "PSD2"          # Payment Services Directive 2
-      - "MiFID_II"      # Markets in Financial Instruments Directive
+      #- "PSD2"          # Payment Services Directive 2
+      #- "MiFID_II"      # Markets in Financial Instruments Directive
       - "EBA_GL"        # European Banking Authority Guidelines
 
     # Built-in policy initiatives to apply
@@ -63,7 +63,7 @@ azure:
       - "CIS_Azure_Foundations_Benchmark"
       - "NIST_SP_800-53_Rev5"
       - "GDPR"
-      - "PCI_DSS_v4"
+      #- "PCI_DSS_v4"
 
     # Optional policy initiatives (enable as needed)
     # Uncomment for payment institutions requiring SWIFT compliance

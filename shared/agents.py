@@ -23,8 +23,8 @@ from claude_agent_sdk import (
     tool
 )
 
-from .logging import get_logger
-from .config import load_config
+from .utils.logging import get_logger
+from .utils.config import load_config
 
 
 class BaseClaudeAgent:
@@ -90,8 +90,9 @@ class BaseClaudeAgent:
         allowed_tools = self.agent_config.get('allowed_tools', [])
         if custom_tools:
             # Add MCP tool names for custom tools
-            for tool_func in custom_tools:
-                tool_name = f"mcp__agent_tools__{tool_func.__name__}"
+            for tool_obj in custom_tools:
+                # SdkMcpTool objects have a 'name' attribute
+                tool_name = f"mcp__agent_tools__{tool_obj.name}"
                 allowed_tools.append(tool_name)
         
         return ClaudeAgentOptions(
@@ -101,7 +102,8 @@ class BaseClaudeAgent:
             max_turns=self.agent_config.get('max_turns'),
             cwd=self.config_dir,
             model=self.agent_config.get('model'),
-            permission_mode=self.agent_config.get('permission_mode', 'default')
+            permission_mode=self.agent_config.get('permission_mode', 'default'),
+            setting_sources=None  # Disable setting sources to avoid CLI incompatibility
         )
     
     def get_system_prompt(self) -> Optional[str]:

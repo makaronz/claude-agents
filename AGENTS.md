@@ -14,6 +14,8 @@ This repository provides a comprehensive framework for building Claude agents us
 8. [Deployment & Production](#deployment--production)
 9. [Troubleshooting](#troubleshooting)
 10. [Contributing](#contributing)
+    - [Documentation Requirements](#documentation-requirements)
+    - [Changelog Guidelines](#changelog-documentation-optional-but-recommended)
 
 ## What are Claude Agents?
 
@@ -582,9 +584,127 @@ When contributing to this repository:
 1. **Fork and Branch**: Create a feature branch from main
 2. **Follow Standards**: Use existing code style and patterns
 3. **Add Tests**: Include tests for new functionality
-4. **Document Changes**: Update relevant documentation
+4. **Document Changes**: Update relevant documentation (see below)
 5. **Test Thoroughly**: Ensure all tests pass
 6. **Submit PR**: Create a detailed pull request
+
+### Documentation Requirements
+
+**⚠️ IMPORTANT**: When making changes to agents, tools, or infrastructure, you **MUST** update the relevant documentation.
+
+#### What to Update
+
+Update documentation when you:
+- **Fix bugs**: Document the issue and solution in troubleshooting sections
+- **Add features**: Update README, usage examples, and configuration docs
+- **Change dependencies**: Update requirements.txt and installation instructions
+- **Modify APIs**: Update tool documentation and code examples
+- **Update prerequisites**: Update all installation and setup guides
+- **Change configuration**: Update config examples and documentation
+
+#### Required Documentation Updates
+
+For each change, update these files as relevant:
+
+1. **Agent-specific README** (`agents/your-agent/README.md`)
+   - Prerequisites and version requirements
+   - Installation instructions
+   - Configuration options
+   - Usage examples
+   - Troubleshooting section
+
+2. **WORKFLOW.md** (if applicable)
+   - Step-by-step deployment guides
+   - Command examples
+   - Expected outputs
+   - Troubleshooting for workflow-specific issues
+
+3. **requirements.txt**
+   - Pin minimum versions for dependencies
+   - Add comments for critical version requirements
+   - Document external tool dependencies (e.g., Claude Code CLI)
+
+4. **Root README.md**
+   - Update global prerequisites if they change
+   - Update agent list if adding/removing agents
+   - Update version requirements table
+
+5. **QUICKSTART.md** (if it exists)
+   - Quick installation steps
+   - Common troubleshooting for new users
+
+#### Changelog Documentation (Optional but Recommended)
+
+For significant changes, bug fixes, or breaking changes, create or update a changelog:
+
+**Create**: `CHANGELOG_<TOPIC>.md` or add to existing `CHANGELOG.md`
+
+Include:
+- **Date** of the change
+- **Issue description** (what was broken/missing)
+- **Root cause** (why it happened)
+- **Fix details** (what was changed, with code snippets)
+- **Testing** (how to verify the fix)
+- **Migration guide** (for breaking changes)
+
+**Example**: See [`CHANGELOG_FIXES.md`](CHANGELOG_FIXES.md) for reference.
+
+#### Documentation Checklist
+
+Before submitting your PR, verify:
+
+- [ ] All affected README files updated
+- [ ] Installation/setup instructions reflect new requirements
+- [ ] Troubleshooting section includes common errors (if applicable)
+- [ ] Version requirements documented (minimum and tested versions)
+- [ ] Code examples updated and tested
+- [ ] Configuration examples valid
+- [ ] Changelog created (for significant changes)
+- [ ] Related documentation cross-referenced
+
+#### Documentation Quality Standards
+
+Good documentation should:
+- ✅ Be **concise** and **scannable** (use bullet points, tables, checklists)
+- ✅ Include **working code examples** (test them!)
+- ✅ Provide **troubleshooting** for common issues
+- ✅ Specify **exact versions** for dependencies
+- ✅ Use **clear section headers** for easy navigation
+- ✅ Include **before/after** examples for fixes
+- ✅ Provide **verification steps** to test the changes
+
+#### When Changelog is Required
+
+Create/update changelog for:
+- 🔴 **Breaking changes** (API changes, dependency updates)
+- 🟡 **Bug fixes** (especially if users may encounter the bug)
+- 🟢 **New features** (significant new capabilities)
+- 🔵 **Security fixes** (any security-related changes)
+- ⚪ **Infrastructure changes** (CI/CD, build process)
+
+#### Example Documentation Update
+
+```markdown
+# Example: Adding a new tool to an agent
+
+## Files to Update
+
+1. agents/my-agent/README.md
+   - Add tool to "Available Tools" section
+   - Add usage example
+   - Add any prerequisites
+
+2. agents/my-agent/config.yaml
+   - Add tool to enabled tools list (if needed)
+
+3. AGENTS.md (this file)
+   - Add tool pattern to "Common Tool Patterns" (if novel)
+
+4. CHANGELOG.md or CHANGELOG_FEATURES.md
+   - Document what the tool does
+   - Provide usage example
+   - Note any new dependencies
+```
 
 ### Code Style
 

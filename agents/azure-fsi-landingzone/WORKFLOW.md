@@ -46,7 +46,19 @@ az account set --subscription "YOUR-SUBSCRIPTION-ID"
 az account show --output table
 ```
 
-### Step 5: Install Python Dependencies
+### Step 5: Install Claude Code CLI (Required)
+```bash
+# Install Claude Code CLI v2.0.1 or later
+npm install -g @anthropic-ai/claude-code@latest
+
+# Verify installation
+claude --version
+# Should show: 2.0.1 (Claude Code) or later
+```
+
+**Important**: Claude Code CLI v2.0+ is required for the claude-agent-sdk to work properly. Earlier versions (1.x) are not compatible.
+
+### Step 6: Install Python Dependencies
 ```bash
 # Navigate to agent directory
 cd agents/azure-fsi-landingzone
@@ -55,16 +67,22 @@ cd agents/azure-fsi-landingzone
 pip install -r requirements.txt
 ```
 
-### Step 6: Configure Environment
+### Step 7: Configure Environment
 ```bash
-# Set your Anthropic API key
-export ANTHROPIC_API_KEY="your-anthropic-api-key-here"
+# Copy the example .env file
+cp .env.example .env
 
-# Verify it's set
-echo $ANTHROPIC_API_KEY
+# Edit .env and add your Anthropic API key
+vim .env
 ```
 
-### Step 7: Review Configuration
+**Required in .env**:
+```bash
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+AZURE_SUBSCRIPTION_ID=your-azure-subscription-id
+```
+
+### Step 8: Review Configuration
 ```bash
 # Edit config.yaml with your preferences
 vim config.yaml
@@ -811,6 +829,94 @@ You now have a **production-ready Azure FSI Landing Zone** deployed with:
 **Total Cost (5 days)**: €617 Azure infrastructure
 **Monthly Recurring**: €5,562/month (before workloads)
 **Your Savings**: €141,000 vs manual deployment
+
+---
+
+## 🔧 Troubleshooting
+
+### Error: "unknown option '--setting-sources'"
+
+**Problem**: You're running an older version of Claude Code CLI (1.x).
+
+**Solution**:
+```bash
+# Update Claude Code to v2.0.1 or later
+npm install -g @anthropic-ai/claude-code@latest
+
+# Verify version
+claude --version
+# Should show: 2.0.1 (Claude Code) or later
+```
+
+### Error: "ImportError: attempted relative import with no known parent package"
+
+**Problem**: Module import issue in shared code.
+
+**Solution**: Already fixed in this version. If you encounter this:
+```bash
+# Make sure you're running from the agent directory
+cd agents/azure-fsi-landingzone
+python agent.py
+```
+
+### Error: "ModuleNotFoundError: No module named 'dotenv'"
+
+**Problem**: Python dependencies not installed.
+
+**Solution**:
+```bash
+pip install -r requirements.txt
+```
+
+### Error: "Failed to connect to Claude Agent SDK"
+
+**Problem**: Missing or invalid `ANTHROPIC_API_KEY`.
+
+**Solution**:
+```bash
+# Check if .env file exists
+ls -la .env
+
+# Edit .env and add your API key
+vim .env
+
+# Make sure the key is valid (starts with sk-ant-api03-)
+grep ANTHROPIC_API_KEY .env
+```
+
+### Error: "AttributeError: 'SdkMcpTool' object has no attribute '__name__'"
+
+**Problem**: Outdated version of shared/agents.py.
+
+**Solution**: This has been fixed in the latest version. Pull the latest changes:
+```bash
+git pull origin main
+```
+
+### Agent starts but hangs/freezes
+
+**Possible causes**:
+1. **Claude Code CLI version mismatch** - Update to v2.0.1+
+2. **Missing .env file** - Copy .env.example to .env and configure
+3. **Network issues** - Check your internet connection to Anthropic API
+
+**Debug**:
+```bash
+# Run with verbose output
+claude --debug python agent.py
+```
+
+### Permission denied errors during deployment
+
+**Problem**: Insufficient Azure permissions.
+
+**Solution**:
+```bash
+# Check your current role
+az role assignment list --assignee $(az account show --query user.name -o tsv) --output table
+
+# You need at least "Contributor" + "User Access Administrator" or "Owner"
+```
 
 ---
 

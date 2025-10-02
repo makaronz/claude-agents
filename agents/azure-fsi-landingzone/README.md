@@ -114,29 +114,48 @@ Pre-configured modules for:
 
 ## Prerequisites
 
-1. **Azure CLI** (v2.50.0 or later)
+1. **Node.js and npm** (for Claude Code CLI)
+   ```bash
+   # Check if installed
+   node --version
+   npm --version
+   ```
+
+2. **Claude Code CLI** (v2.0.1 or later) - **REQUIRED**
+   ```bash
+   # Install Claude Code
+   npm install -g @anthropic-ai/claude-code@latest
+
+   # Verify installation
+   claude --version
+   # Should show: 2.0.1 (Claude Code) or later
+   ```
+
+   **Important**: Claude Code CLI v2.0+ is required. Earlier versions (1.x) are not compatible with claude-agent-sdk v0.1.0.
+
+3. **Azure CLI** (v2.50.0 or later)
    ```bash
    # Install Azure CLI
    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
    ```
 
-2. **Bicep** (v0.24.0 or later)
+4. **Bicep** (v0.24.0 or later)
    ```bash
    # Install Bicep
    az bicep install
    ```
 
-3. **Python** (3.10 or later)
+5. **Python** (3.10 or later)
    ```bash
    python --version
    ```
 
-4. **Azure Subscription** with appropriate permissions:
+6. **Azure Subscription** with appropriate permissions:
    - Owner or Contributor role
    - Policy assignment permissions
    - Network resource creation rights
 
-5. **Authentication**
+7. **Authentication**
    ```bash
    # Login to Azure
    az login
@@ -153,27 +172,49 @@ Pre-configured modules for:
    cd claude-agents
    ```
 
-2. **Install dependencies**
+2. **Navigate to agent directory**
+   ```bash
+   cd agents/azure-fsi-landingzone
+   ```
+
+3. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure environment**
+4. **Configure environment**
    ```bash
-   # Set Azure credentials
-   export AZURE_SUBSCRIPTION_ID="<your-subscription-id>"
-   export AZURE_TENANT_ID="<your-tenant-id>"
+   # Copy example .env file
+   cp .env.example .env
 
-   # Set Anthropic API key
-   export ANTHROPIC_API_KEY="<your-api-key>"
+   # Edit .env and add your credentials
+   vim .env
    ```
 
-4. **Customize configuration**
-   Edit `agents/azure-fsi-landingzone/config.yaml` to customize:
+   **Required in .env**:
+   ```bash
+   ANTHROPIC_API_KEY=sk-ant-api03-...
+   AZURE_SUBSCRIPTION_ID=your-subscription-id
+   AZURE_TENANT_ID=your-tenant-id  # Optional if using az login
+   ```
+
+5. **Customize configuration**
+   Edit `config.yaml` to customize:
    - Naming conventions
    - Network address spaces
    - Compliance requirements
    - Policy settings
+
+6. **Verify installation**
+   ```bash
+   # Test the agent
+   python agent.py
+
+   # You should see:
+   # ================================================================================
+   #   🏦 AZURE FSI LANDING ZONE DEPLOYMENT AGENT
+   # ================================================================================
+   ```
 
 ## 📅 Deployment Timeline & Cost Estimation
 

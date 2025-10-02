@@ -1,29 +1,31 @@
 # Azure FSI Landing Zone Agent - Specific Dependencies
 
 # Core dependencies (from parent requirements.txt)
+# Note: claude-agent-sdk v0.1.0+ requires Claude Code CLI v2.0.1+
+# Install Claude Code: npm install -g @anthropic-ai/claude-code@latest
 claude-agent-sdk>=0.1.0
 pydantic>=2.0.0
 python-dotenv>=1.0.0
 pyyaml>=6.0.0
 
 # Azure SDK dependencies
-azure-identity>=1.15.0
-azure-mgmt-resource>=23.0.0
-azure-mgmt-network>=25.0.0
-azure-mgmt-keyvault>=10.3.0
-azure-mgmt-storage>=21.1.0
-azure-mgmt-authorization>=4.0.0
-azure-mgmt-policyinsights>=1.1.0
-azure-mgmt-security>=6.0.0
-azure-mgmt-monitor>=6.0.0
-azure-mgmt-managementgroups>=1.0.0
+azure-identity
+azure-mgmt-resource
+azure-mgmt-network
+azure-mgmt-keyvault
+azure-mgmt-storage
+azure-mgmt-authorization
+azure-mgmt-policyinsights
+azure-mgmt-security
+azure-mgmt-monitor
+azure-mgmt-managementgroups
 
 # Optional: For enhanced Azure CLI integration
-azure-cli-core>=2.50.0
+azure-cli-core
 
 # Optional: For Terraform support
-python-terraform>=0.10.1
+python-terraform
 
 # Utilities
-requests>=2.31.0
-aiohttp>=3.8.0
+requests
+aiohttp
