@@ -1,0 +1,47 @@
+# Security Specialist Sub-Agent Configuration
+name: "security-specialist"
+version: "1.0.0"
+description: "Expert in FSI compliance, security policies, and hardening for Azure Landing Zones"
+
+# Claude Agent SDK settings
+system_prompt: null  # Uses the agent's get_system_prompt() method
+model: "claude-sonnet-4-5"
+max_turns: null
+permission_mode: "default"
+
+# Allowed tools
+allowed_tools:
+  - "Read"
+  - "Bash"
+  - "Grep"
+  - "Glob"
+
+# Security-specific configuration
+security:
+  focus_areas:
+    - "Azure Policies compliance"
+    - "Key Vault configuration"
+    - "Network Security Groups"
+    - "Entra ID / Conditional Access"
+    - "Data encryption (at rest & in transit)"
+    - "Private endpoints"
+    - "Security baselines"
+
+  compliance_frameworks:
+    - "GDPR"
+    - "DORA"
+    - "PSD2"
+    - "MiFID II"
+    - "EBA Guidelines"
+    - "ISO 27001"
+    - "NIST"
+
+  security_checks:
+    - "No public IP addresses"
+    - "Encryption with customer-managed keys"
+    - "Private endpoints for PaaS"
+    - "NSG rules validation"
+    - "Key Vault purge protection"
+    - "Diagnostic settings enabled"
+    - "RBAC least privilege"
+    - "MFA enabled"

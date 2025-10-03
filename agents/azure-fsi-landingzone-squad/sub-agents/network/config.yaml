@@ -1,0 +1,34 @@
+# Network Specialist Sub-Agent Configuration
+name: "network-specialist"
+version: "1.0.0"
+description: "Expert in Azure network architecture, hub-spoke topology, and connectivity for FSI"
+
+system_prompt: null
+model: "claude-sonnet-4-5"
+max_turns: null
+permission_mode: "default"
+
+allowed_tools:
+  - "Read"
+  - "Bash"
+  - "Grep"
+  - "Glob"
+
+network:
+  focus_areas:
+    - "Hub-spoke topology"
+    - "Azure Firewall configuration"
+    - "VPN Gateway / ExpressRoute"
+    - "Private endpoints"
+    - "VNet peering"
+    - "Routing and UDRs"
+    - "DNS configuration"
+
+  technologies:
+    - "Azure Virtual Network"
+    - "Azure Firewall"
+    - "Azure Bastion"
+    - "VPN Gateway"
+    - "Private Link / Private Endpoints"
+    - "Network Security Groups"
+    - "Application Gateway / Front Door"
