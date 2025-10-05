@@ -61,6 +61,11 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
         self.selected_rings: List[str] = []  # Rings to deploy
         self.ring_depth: str = "standard"  # minimal, standard, advanced
 
+        # Free Tier and Environment tracking
+        self.is_free_tier: Optional[bool] = None  # Detected or set by user
+        self.environment_type: Optional[str] = None  # dev, test, staging, prod, sandbox
+        self.deployment_strategy: str = "shared-hub"  # full-rings, shared-hub, minimal
+
     def get_project_dir(self) -> Path:
         """
         Get the project directory for storing generated assets.
@@ -84,9 +89,18 @@ You help organizations deploy secure, compliant Azure infrastructure using:
 2. **Azure Verified Modules (AVM)**: Validated, production-ready infrastructure modules
 3. **European Compliance**: Built-in policies for GDPR, DORA, PSD2, MiFID II, EBA Guidelines
 
-IMPORTANT: Before generating any files (templates, plans, etc.), you MUST ask the user for a project name.
-This project name will be used to create a dedicated subfolder where all generated assets will be stored.
-Use the set_project_name tool to save the project name before proceeding with file generation.
+IMPORTANT: Before generating any files (templates, plans, etc.), you MUST:
+1. Ask the user for a project name (use set_project_name tool)
+2. Ask if the subscription is Free Tier or Standard (use detect_subscription_tier tool)
+3. Ask what environment type they want (dev/test/staging/prod/sandbox) (use set_environment_type tool)
+
+These settings will be propagated to all sub-agents (Architect, DevOps, Network, Security).
+
+These settings determine:
+- Which Azure resources can be deployed (Free Tier has restrictions)
+- Cost guardrails and budgets (Free Tier gets automatic budgets and alerts)
+- Auto-cleanup policies (non-prod environments expire after X days)
+- SKU selections (Free Tier uses Basic/Free SKUs, Standard uses Premium)
 
 Your expertise includes:
 - Hub-spoke network architectures for financial services
@@ -115,6 +129,9 @@ and ensure best practices are followed for financial services workloads in Azure
         """Get custom tools for this agent."""
         return [
             self.set_project_name,
+            self.detect_subscription_tier,
+            self.set_environment_type,
+            self.set_deployment_strategy,
             self.list_deployment_rings,
             self.select_deployment_rings,
             self.set_ring_depth,
@@ -159,6 +176,151 @@ and ensure best practices are followed for financial services workloads in Azure
         result_text += f"📁 All generated assets will be saved to:\n"
         result_text += f"   {project_dir}\n\n"
         result_text += "You can now proceed with generating templates, deployment plans, and other assets."
+
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
+
+    @tool("detect_subscription_tier", "Detect if Azure subscription is Free Tier or Standard", {})
+    async def detect_subscription_tier(self, args):
+        """Detect subscription tier by running the detection script."""
+        import subprocess
+
+        script_path = self.config_dir / "scripts" / "detect-free-tier.sh"
+
+        if not script_path.exists():
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ Detection script not found. Please run manually or specify tier."}
+                ]
+            }
+
+        try:
+            # Run the detection script
+            result = subprocess.run(
+                [str(script_path)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=self.config_dir
+            )
+
+            # Read the flag file
+            flag_file = self.config_dir / "isFreeTier.flag"
+            if flag_file.exists():
+                with open(flag_file, 'r') as f:
+                    is_free_tier_str = f.read().strip()
+                    self.is_free_tier = is_free_tier_str.lower() == 'true'
+
+            output_text = "🔍 Détection automatique du type d'abonnement\n\n"
+            output_text += result.stdout
+            output_text += "\n"
+
+            if self.is_free_tier is not None:
+                output_text += f"\n✅ Tier détecté et enregistré: {'Free Tier' if self.is_free_tier else 'Standard'}\n"
+                output_text += "\n💡 Cette configuration sera propagée aux sub-agents (Architect, DevOps, Network, Security)\n"
+
+            return {
+                "content": [
+                    {"type": "text", "text": output_text}
+                ]
+            }
+
+        except Exception as e:
+            return {
+                "content": [
+                    {"type": "text", "text": f"❌ Error running detection: {str(e)}\n\nPlease specify tier manually."}
+                ]
+            }
+
+    @tool("set_environment_type", "Set the environment type (dev/test/staging/prod/sandbox)", {"env_type": str})
+    async def set_environment_type(self, args):
+        """Set the environment type for deployment."""
+        env_type = args.get("env_type", "").strip().lower()
+
+        valid_envs = ["dev", "test", "staging", "prod", "sandbox"]
+        if env_type not in valid_envs:
+            return {
+                "content": [
+                    {"type": "text", "text": f"❌ Invalid environment type. Choose from: {', '.join(valid_envs)}"}
+                ]
+            }
+
+        self.environment_type = env_type
+
+        # Determine characteristics based on environment
+        is_prod = env_type == "prod"
+        ttl_days = 7 if env_type == "dev" else \
+                   3 if env_type == "test" else \
+                   14 if env_type == "staging" else \
+                   30 if env_type == "sandbox" else 0
+
+        result_text = f"✅ Environment type set: {env_type.upper()}\n\n"
+
+        if is_prod:
+            result_text += "📊 Production Environment:\n"
+            result_text += "   • No auto-cleanup (permanent resources)\n"
+            result_text += "   • Full security features enabled\n"
+            result_text += "   • Geo-redundant storage for DORA compliance\n"
+            result_text += "   • Premium SKUs for critical services\n"
+        else:
+            result_text += "📊 Non-Production Environment:\n"
+            result_text += f"   • Auto-cleanup after {ttl_days} days\n"
+            result_text += "   • Cost-optimized SKUs\n"
+            result_text += "   • Expiration tags automatically added\n"
+            result_text += "   • Budget alerts enabled\n"
+
+        result_text += f"\n💡 Next: Specify deployment strategy with set_deployment_strategy tool"
+        result_text += f"\n💡 Cette configuration sera propagée aux sub-agents"
+
+        return {
+            "content": [
+                {"type": "text", "text": result_text}
+            ]
+        }
+
+    @tool("set_deployment_strategy", "Set deployment strategy (full-rings/shared-hub/minimal)", {"strategy": str})
+    async def set_deployment_strategy(self, args):
+        """Set the deployment strategy for the landing zone."""
+        strategy = args.get("strategy", "").strip().lower()
+
+        valid_strategies = ["full-rings", "shared-hub", "minimal"]
+        if strategy not in valid_strategies:
+            return {
+                "content": [
+                    {"type": "text", "text": f"❌ Invalid strategy. Choose from: {', '.join(valid_strategies)}"}
+                ]
+            }
+
+        self.deployment_strategy = strategy
+
+        result_text = f"✅ Deployment strategy set: {strategy}\n\n"
+
+        if strategy == "full-rings":
+            result_text += "📊 Full Rings Strategy:\n"
+            result_text += "   • Deploys all rings (Ring 0 + Ring 1/2/3) per environment\n"
+            result_text += "   • Each environment gets complete architecture\n"
+            result_text += "   • ⚠️  Not recommended for Free Tier (too expensive)\n"
+            result_text += "   • Best for: Production, multi-workload environments\n"
+        elif strategy == "shared-hub":
+            result_text += "📊 Shared Hub Strategy:\n"
+            result_text += "   • Single Ring 0 (Hub) shared across environments\n"
+            result_text += "   • Separate spokes (Ring 1+) per environment\n"
+            result_text += "   • ✅ Recommended for Free Tier\n"
+            result_text += "   • Best for: Cost optimization, dev/test environments\n"
+        else:  # minimal
+            result_text += "📊 Minimal Strategy:\n"
+            result_text += "   • Only Ring 0 (Hub) + 1 spoke\n"
+            result_text += "   • Simplest architecture\n"
+            result_text += "   • ✅ Ideal for Free Tier or POC\n"
+            result_text += "   • Best for: Learning, proof-of-concept\n"
+
+        if self.is_free_tier and strategy == "full-rings":
+            result_text += "\n⚠️  WARNING: Full rings strategy detected with Free Tier subscription!\n"
+            result_text += "   This may exceed Free Tier quotas and incur costs.\n"
+            result_text += "   Consider using 'shared-hub' or 'minimal' strategy instead.\n"
 
         return {
             "content": [
