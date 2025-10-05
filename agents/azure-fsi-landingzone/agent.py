@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from shared.agents import InteractiveAgent
 from shared.utils import setup_logging
-from claude_agent_sdk import tool
+from claude_agent_sdk import tool, AssistantMessage, TextBlock
 
 
 class AzureFSILandingZoneAgent(InteractiveAgent):
@@ -48,6 +48,7 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
 
         # Squad mode configuration
         self.squad_mode = squad_mode
+        self.squad_agents: Dict[str, Any] = {}  # Initialized on-demand
 
         # Track deployment state
         self.deployment_state = {
@@ -83,9 +84,109 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
         project_dir.mkdir(parents=True, exist_ok=True)
         return project_dir
 
+    async def _initialize_squad(self) -> None:
+        """Initialize squad agents on-demand (lazy loading)."""
+        if not self.squad_mode or self.squad_agents:
+            return  # Already initialized or not in squad mode
+
+        # Lazy import to avoid overhead in solo mode
+        import sys
+        sub_agents_path = self.config_dir / "sub-agents"
+        if str(sub_agents_path) not in sys.path:
+            sys.path.insert(0, str(sub_agents_path))
+
+        from architect.agent import ArchitectSpecialistAgent
+        from security.agent import SecuritySpecialistAgent
+        from network.agent import NetworkSpecialistAgent
+        from devops.agent import DevOpsSpecialistAgent
+
+        # Initialize sub-agents with same config directory
+        sub_agents_dir = self.config_dir / "sub-agents"
+
+        self.squad_agents = {
+            'architect': ArchitectSpecialistAgent(sub_agents_dir / "architect"),
+            'security': SecuritySpecialistAgent(sub_agents_dir / "security"),
+            'network': NetworkSpecialistAgent(sub_agents_dir / "network"),
+            'devops': DevOpsSpecialistAgent(sub_agents_dir / "devops")
+        }
+
+        # Connect all sub-agents
+        for agent in self.squad_agents.values():
+            await agent.connect()
+
+        self.logger.info("Squad agents initialized successfully")
+
+    async def _delegate_to_specialist(self, specialist: str, task: str, context: Dict[str, Any] = None) -> str:
+        """Delegate a task to a specialist agent."""
+        if not self.squad_mode:
+            raise RuntimeError("Squad mode not enabled")
+
+        await self._initialize_squad()
+
+        if specialist not in self.squad_agents:
+            raise ValueError(f"Unknown specialist: {specialist}")
+
+        # Build context-aware prompt
+        prompt = task
+        if context:
+            context_str = json.dumps(context, indent=2)
+            prompt = f"Context:\n{context_str}\n\nTask: {task}"
+
+        # Query specialist agent
+        agent = self.squad_agents[specialist]
+        response_parts = []
+
+        async for msg in agent.query(prompt):
+            if isinstance(msg, AssistantMessage):
+                for block in msg.content:
+                    if isinstance(block, TextBlock):
+                        response_parts.append(block.text)
+
+        return "\n".join(response_parts)
+
+    async def _parallel_analysis(self, agents: List[str], task: str, context: Dict[str, Any] = None) -> Dict[str, str]:
+        """Run multiple agents in parallel for comprehensive analysis."""
+        if not self.squad_mode:
+            raise RuntimeError("Squad mode not enabled")
+
+        await self._initialize_squad()
+
+        # Create tasks for parallel execution
+        tasks = []
+        for agent_name in agents:
+            tasks.append(self._delegate_to_specialist(agent_name, task, context))
+
+        # Execute in parallel
+        results = await asyncio.gather(*tasks)
+
+        # Map results to agent names
+        return dict(zip(agents, results))
+
+    async def _synthesize_results(self, results: Dict[str, str], context: Dict[str, Any] = None) -> str:
+        """Use Architect agent to synthesize multi-agent results."""
+        if not self.squad_mode:
+            raise RuntimeError("Squad mode not enabled")
+
+        await self._initialize_squad()
+
+        # Build synthesis prompt
+        synthesis_context = context or {}
+        synthesis_context['specialist_findings'] = results
+
+        synthesis_task = """Synthesize the following specialist findings into a comprehensive assessment:
+
+Please provide:
+1. Overall assessment score (1-10)
+2. Critical issues (blockers)
+3. Recommended improvements
+4. Prioritized action plan
+5. Cross-domain insights (conflicts or synergies between specialists)"""
+
+        return await self._delegate_to_specialist('architect', synthesis_task, synthesis_context)
+
     def get_system_prompt(self) -> Optional[str]:
         """Get the system prompt for this agent."""
-        return """You are an Azure Financial Services Industry (FSI) Landing Zone deployment expert.
+        base_prompt = """You are an Azure Financial Services Industry (FSI) Landing Zone deployment expert.
 
 You help organizations deploy secure, compliant Azure infrastructure using:
 
@@ -129,9 +230,52 @@ You provide step-by-step guidance, validate configurations before deployment,
 and ensure best practices are followed for financial services workloads in Azure.
 """
 
+        if self.squad_mode:
+            squad_prompt = """
+
+🤖 SQUAD MODE ENABLED - Multi-Agent Orchestration
+
+You have access to specialist agents for deep domain analysis:
+- 🔒 Security Agent: Compliance (GDPR/DORA/PSD2), Key Vault, NSGs, Entra ID
+- 🌐 Network Agent: Hub-spoke topology, Firewall, Private Endpoints, VNet peering
+- 🚀 DevOps Agent: CI/CD pipelines, deployment automation, GitOps
+- 🏗️  Architect Agent: Cross-domain synthesis, best practices, cost optimization
+
+DELEGATION GUIDELINES:
+
+1. **Use delegation tools** for specialist tasks:
+   - Security reviews → delegate_to_security
+   - Network analysis → delegate_to_network
+   - Pipeline/deployment → delegate_to_devops
+   - Comprehensive review → run_squad_review (all specialists + synthesis)
+
+2. **When to delegate**:
+   - User asks for security/compliance review → Security Agent
+   - User asks about network topology/connectivity → Network Agent
+   - User asks about CI/CD or deployment automation → DevOps Agent
+   - User asks "review my deployment" → run_squad_review (parallel analysis)
+
+3. **Workflow patterns**:
+   - **Parallel** (preferred): For independent analyses, use run_squad_review
+   - **Sequential**: For dependent tasks, chain delegate_to_* calls
+   - **Synthesis**: Architect agent automatically synthesizes multi-agent results
+
+4. **Context sharing**: Pass project_name, tier, environment_type to specialists via context parameter
+
+Example:
+User: "Review my Ring 0 security for production"
+→ Use delegate_to_security with context: {ring: "0", environment: "prod"}
+
+User: "Review entire deployment for compliance"
+→ Use run_squad_review (all agents in parallel + synthesis)
+"""
+            return base_prompt + squad_prompt
+
+        return base_prompt
+
     def get_custom_tools(self) -> List[Any]:
         """Get custom tools for this agent."""
-        return [
+        base_tools = [
             self.set_project_name,
             self.detect_subscription_tier,
             self.set_environment_type,
@@ -156,6 +300,18 @@ and ensure best practices are followed for financial services workloads in Azure
             self.deploy_conditional_access,
             self.setup_pim_roles,
         ]
+
+        # Add squad mode delegation tools
+        if self.squad_mode:
+            base_tools.extend([
+                self.delegate_to_security,
+                self.delegate_to_network,
+                self.delegate_to_devops,
+                self.delegate_to_architect,
+                self.run_squad_review,
+            ])
+
+        return base_tools
 
     @tool("set_project_name", "Set the project name for organizing generated assets in a dedicated subfolder", {"project_name": str})
     async def set_project_name(self, args):
@@ -2394,6 +2550,162 @@ output bastionDnsName string = bastionPublicIP.properties.dnsSettings.fqdn
             ]
         }
         return json.dumps(plan, indent=2)
+
+    # ============================================================================
+    # SQUAD MODE DELEGATION TOOLS
+    # ============================================================================
+
+    @tool("delegate_to_security", "Delegate a security or compliance task to the Security specialist agent", {"task": str, "context": dict})
+    async def delegate_to_security(self, args):
+        """Delegate a security/compliance analysis task to the Security specialist."""
+        if not self.squad_mode:
+            return {
+                "content": [{"type": "text", "text": "❌ Squad mode is not enabled. Use --squad flag to enable multi-agent collaboration."}]
+            }
+
+        task = args.get("task", "")
+        context = args.get("context", {})
+
+        # Add current project context
+        if self.project_name:
+            context['project_name'] = self.project_name
+        if self.is_free_tier is not None:
+            context['tier'] = 'free' if self.is_free_tier else 'standard'
+        if self.environment_type:
+            context['environment'] = self.environment_type
+
+        result = await self._delegate_to_specialist('security', task, context)
+
+        return {
+            "content": [{"type": "text", "text": f"🔒 Security Agent Analysis:\n\n{result}"}]
+        }
+
+    @tool("delegate_to_network", "Delegate a network architecture or connectivity task to the Network specialist agent", {"task": str, "context": dict})
+    async def delegate_to_network(self, args):
+        """Delegate a network analysis task to the Network specialist."""
+        if not self.squad_mode:
+            return {
+                "content": [{"type": "text", "text": "❌ Squad mode is not enabled. Use --squad flag to enable multi-agent collaboration."}]
+            }
+
+        task = args.get("task", "")
+        context = args.get("context", {})
+
+        # Add current project context
+        if self.project_name:
+            context['project_name'] = self.project_name
+        if self.is_free_tier is not None:
+            context['tier'] = 'free' if self.is_free_tier else 'standard'
+        if self.environment_type:
+            context['environment'] = self.environment_type
+
+        result = await self._delegate_to_specialist('network', task, context)
+
+        return {
+            "content": [{"type": "text", "text": f"🌐 Network Agent Analysis:\n\n{result}"}]
+        }
+
+    @tool("delegate_to_devops", "Delegate a CI/CD, deployment automation, or pipeline task to the DevOps specialist agent", {"task": str, "context": dict})
+    async def delegate_to_devops(self, args):
+        """Delegate a DevOps analysis task to the DevOps specialist."""
+        if not self.squad_mode:
+            return {
+                "content": [{"type": "text", "text": "❌ Squad mode is not enabled. Use --squad flag to enable multi-agent collaboration."}]
+            }
+
+        task = args.get("task", "")
+        context = args.get("context", {})
+
+        # Add current project context
+        if self.project_name:
+            context['project_name'] = self.project_name
+        if self.is_free_tier is not None:
+            context['tier'] = 'free' if self.is_free_tier else 'standard'
+        if self.environment_type:
+            context['environment'] = self.environment_type
+
+        result = await self._delegate_to_specialist('devops', task, context)
+
+        return {
+            "content": [{"type": "text", "text": f"🚀 DevOps Agent Analysis:\n\n{result}"}]
+        }
+
+    @tool("delegate_to_architect", "Delegate an architecture synthesis or cross-domain analysis task to the Architect specialist agent", {"task": str, "context": dict})
+    async def delegate_to_architect(self, args):
+        """Delegate an architecture analysis task to the Architect specialist."""
+        if not self.squad_mode:
+            return {
+                "content": [{"type": "text", "text": "❌ Squad mode is not enabled. Use --squad flag to enable multi-agent collaboration."}]
+            }
+
+        task = args.get("task", "")
+        context = args.get("context", {})
+
+        # Add current project context
+        if self.project_name:
+            context['project_name'] = self.project_name
+        if self.is_free_tier is not None:
+            context['tier'] = 'free' if self.is_free_tier else 'standard'
+        if self.environment_type:
+            context['environment'] = self.environment_type
+
+        result = await self._delegate_to_specialist('architect', task, context)
+
+        return {
+            "content": [{"type": "text", "text": f"🏗️  Architect Agent Analysis:\n\n{result}"}]
+        }
+
+    @tool("run_squad_review", "Run a comprehensive multi-agent review with all specialists (Security, Network, DevOps) in parallel, then synthesize with Architect", {"review_scope": str, "context": dict})
+    async def run_squad_review(self, args):
+        """Run a comprehensive multi-agent review with parallel analysis and synthesis."""
+        if not self.squad_mode:
+            return {
+                "content": [{"type": "text", "text": "❌ Squad mode is not enabled. Use --squad flag to enable multi-agent collaboration."}]
+            }
+
+        review_scope = args.get("review_scope", "Comprehensive deployment review")
+        context = args.get("context", {})
+
+        # Add current project context
+        if self.project_name:
+            context['project_name'] = self.project_name
+        if self.is_free_tier is not None:
+            context['tier'] = 'free' if self.is_free_tier else 'standard'
+        if self.environment_type:
+            context['environment'] = self.environment_type
+
+        # Run parallel analysis with Security, Network, and DevOps agents
+        specialists = ['security', 'network', 'devops']
+        specialist_results = await self._parallel_analysis(specialists, review_scope, context)
+
+        # Synthesize results with Architect agent
+        synthesis = await self._synthesize_results(specialist_results, context)
+
+        # Format comprehensive report
+        report = "📊 COMPREHENSIVE SQUAD REVIEW\n"
+        report += "=" * 80 + "\n\n"
+
+        report += f"🔍 Review Scope: {review_scope}\n\n"
+
+        report += "🔒 SECURITY AGENT FINDINGS:\n"
+        report += "-" * 80 + "\n"
+        report += specialist_results['security'] + "\n\n"
+
+        report += "🌐 NETWORK AGENT FINDINGS:\n"
+        report += "-" * 80 + "\n"
+        report += specialist_results['network'] + "\n\n"
+
+        report += "🚀 DEVOPS AGENT FINDINGS:\n"
+        report += "-" * 80 + "\n"
+        report += specialist_results['devops'] + "\n\n"
+
+        report += "🏗️  ARCHITECT SYNTHESIS:\n"
+        report += "=" * 80 + "\n"
+        report += synthesis + "\n"
+
+        return {
+            "content": [{"type": "text", "text": report}]
+        }
 
 
 async def main():
