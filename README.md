@@ -6,20 +6,26 @@ A collection of Claude agents built using the official **Claude Agent SDK** for 
 
 ```
 claude-agents/
-├── agents/                 # Individual agent implementations
-│   ├── agent-template/     # Template for new agents
-│   └── example-agent/      # Example agent with custom tools
-├── shared/                 # Shared utilities and base classes
-│   ├── agents.py          # BaseClaudeAgent and InteractiveAgent classes
-│   ├── utils/             # Common utility functions
-│   └── configs/           # Shared configuration files
-├── docs/                  # Documentation
-│   ├── getting-started.md # Getting started guide
-│   ├── agent-guide.md     # How to create agents
-│   └── deployment.md     # Deployment instructions
-├── scripts/               # Build and deployment scripts
-├── tests/                 # Test files
-└── examples/              # Example implementations and demos
+├── agents/                      # Individual agent implementations
+│   ├── agent-template/          # Template for new agents
+│   ├── example-agent/           # Example agent with custom tools
+│   ├── azure-fsi-landingzone/   # Mono-agent for FSI Landing Zones
+│   └── azure-fsi-landingzone-squad/ # Multi-agent squad for FSI
+├── shared/                      # Shared utilities and base classes
+│   ├── agents.py               # BaseClaudeAgent and InteractiveAgent classes
+│   ├── utils/                  # Common utility functions
+│   └── configs/                # Shared configuration files
+├── docs/                       # Documentation
+│   ├── getting-started.md      # Getting started guide
+│   ├── agents/                 # Agent development docs
+│   │   ├── overview.md         # Agent overview and catalog
+│   │   └── creating-agents.md  # How to create agents
+│   └── azure-fsi/              # Azure FSI Landing Zone docs
+│       ├── README.md           # FSI agents overview
+│       ├── architecture/       # Architecture documentation
+│       └── guides/             # Usage guides
+├── scripts/                    # Build and deployment scripts
+└── tests/                      # Test files
 ```
 
 ## Features
@@ -63,10 +69,22 @@ claude-agents/
 
 ## Available Agents
 
-- **🏗️ agent-template**: Complete template for creating new agents with custom tools
-- **🎯 example-agent**: Feature-rich example showing Claude Agent SDK capabilities
-- **🏦 azure-fsi-landingzone**: Azure Financial Services Industry Landing Zone deployment agent with European compliance (GDPR, DORA, PSD2, MiFID II)
-- **📋 azure-compliance-checker**: Automated compliance validation agent for French FSI regulations (ACPR, CRD IV/CRR, LCB-FT, RGPD, ISO 27001, DORA, NIS2)
+### Templates & Examples
+- **🏗️ [agent-template](agents/agent-template/)**: Complete template for creating new agents with custom tools
+- **🎯 [example-agent](agents/example-agent/)**: Feature-rich example showing Claude Agent SDK capabilities
+
+### Azure FSI Landing Zone Agents
+- **🏦 [azure-fsi-landingzone](docs/azure-fsi/)**: Mono-agent for quick Azure FSI Landing Zone deployments
+- **👥 [azure-fsi-landingzone-squad](docs/azure-fsi/)**: Multi-agent squad with specialist expertise (Architect, DevOps, Security, Network)
+
+**Choose between:**
+- **Mono-agent**: Best for quick template generation and simple deployments
+- **Squad**: Best for production readiness, compliance reviews, and expert analysis
+
+See the [Azure FSI Documentation](docs/azure-fsi/) for detailed comparison and guides.
+
+### Compliance Tools
+- **📋 [azure-compliance-checker](agents/azure-compliance-checker/)**: Automated compliance validation for French FSI regulations (ACPR, CRD IV/CRR, LCB-FT, RGPD, ISO 27001, DORA, NIS2)
 
 ## Requirements
 
@@ -104,11 +122,28 @@ async def my_custom_tool(args):
     return {"content": [{"type": "text", "text": "Result"}]}
 ```
 
+## Documentation
+
+### Getting Started
+- **[Getting Started Guide](docs/getting-started.md)**: Repository setup and environment configuration
+- **[Agent Overview](docs/agents/overview.md)**: Learn about Claude agents and available implementations
+- **[Creating Agents](docs/agents/creating-agents.md)**: Comprehensive guide to building custom agents
+
+### Specialized Documentation
+- **[Azure FSI Landing Zone](docs/azure-fsi/)**: Complete documentation for FSI Landing Zone agents
+  - Architecture guides (Ring-based deployment, Multi-agent squad)
+  - Quick start guides (Mono-agent, Squad)
+  - Deployment workflows and best practices
+
+### Reference
+- **[Repository Architecture](ARCHITECTURE.md)**: Overall repository architecture
+- **[Roadmap](ROADMAP.md)**: Future plans and features
+
 ## Contributing
 
 1. Use the `agent-template` as a starting point
-2. Follow the established directory structure  
-3. Add comprehensive documentation
+2. Follow the established directory structure
+3. Add comprehensive documentation (see [docs/agents/creating-agents.md](docs/agents/creating-agents.md))
 4. Include tests for custom functionality
 5. Use type hints throughout
 
