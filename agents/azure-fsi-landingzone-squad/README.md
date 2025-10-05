@@ -1,22 +1,32 @@
-# Azure FSI Landing Zone Agent (Multi-Agent Squad)
+# Azure FSI Landing Zone Agent
 
-Expert-level FSI Landing Zone analysis through specialized AI agent collaboration.
+An AI-powered deployment agent for Azure Financial Services Industry (FSI) Landing Zones.
 
 ## Overview
 
-This is the **multi-agent squad** implementation - a team of specialist AI agents that collaborate to provide expert-level analysis and recommendations.
+This agent helps deploy secure, compliant Azure infrastructure for financial services using Microsoft FSI Landing Zone templates, Azure Verified Modules (AVM), and European compliance policies.
 
-**The Squad:**
-- 🏗️ **Architect Agent**: Holistic design and architectural recommendations
-- 🚀 **DevOps Agent**: CI/CD pipelines and deployment automation
-- 🔒 **Security Agent**: Security posture and compliance analysis
-- 🌐 **Network Agent**: Network design and connectivity review
+**Two modes available:**
+- **Solo Mode** (default): Fast template generation and simple deployments
+- **Squad Mode** (`--squad`): Multi-agent collaboration with specialist expertise
 
 ## Quick Start
 
+### Solo Mode (Default)
 ```bash
-cd agents/azure-fsi-landingzone-squad
+cd agents/azure-fsi-landingzone
 python agent.py
+```
+
+Example prompts:
+- "Generate Ring 0 foundation templates for FSI Landing Zone"
+- "Create a hub VNet with Azure Firewall"
+- "List available deployment rings"
+
+### Squad Mode (Multi-Agent)
+```bash
+cd agents/azure-fsi-landingzone
+python agent.py --squad
 ```
 
 Example prompts:
@@ -25,9 +35,15 @@ Example prompts:
 - "Detect drift between local templates and deployed Azure resources"
 - "Generate comprehensive compliance report"
 
-## When to Use This Agent
+## Choosing the Right Mode
 
-✅ **Use this agent when:**
+### ✅ Use **Solo Mode** when:
+- You need quick template generation
+- Your task is simple and focused
+- You're getting started with FSI Landing Zones
+- You prefer simplicity and lower cost
+
+### ✅ Use **Squad Mode** when:
 - You need comprehensive security/compliance review
 - You want expert analysis across multiple domains
 - You need drift detection between local templates and deployed infrastructure
@@ -35,13 +51,16 @@ Example prompts:
 - You want parallel analysis for faster results on complex tasks
 - You need cross-domain insights (security + network + DevOps)
 
-❌ **Consider the Mono-Agent instead when:**
-- You just need quick template generation
-- Your task is simple and focused
-- You're getting started with FSI Landing Zones
-- You prefer simplicity over depth
+## Squad Mode Features
 
-## How It Works
+When running with `--squad`, you get access to specialist sub-agents:
+
+- 🏗️ **Architect Agent**: Holistic design and architectural recommendations
+- 🚀 **DevOps Agent**: CI/CD pipelines and deployment automation
+- 🔒 **Security Agent**: Security posture and compliance analysis
+- 🌐 **Network Agent**: Network design and connectivity review
+
+### How Squad Mode Works
 
 The orchestrator agent coordinates specialist agents to provide multi-dimensional analysis:
 
@@ -64,11 +83,12 @@ Consolidated Report
 📚 **[Complete Azure FSI Documentation](../../docs/azure-fsi/)**
 
 ### Quick Links
-- **[Quick Start Guide](../../docs/azure-fsi/guides/quickstart-squad.md)**
+- **[Solo Mode Quick Start](../../docs/azure-fsi/guides/quickstart-mono.md)**
+- **[Squad Mode Quick Start](../../docs/azure-fsi/guides/quickstart-squad.md)**
 - **[Multi-Agent Architecture](../../docs/azure-fsi/architecture/multi-agent.md)**
 - **[Ring Architecture](../../docs/azure-fsi/architecture/rings.md)**
 - **[Deployment Workflow](../../docs/azure-fsi/guides/workflow.md)**
-- **[Mono vs Squad Comparison](../../docs/azure-fsi/guides/comparison.md)**
+- **[Solo vs Squad Comparison](../../docs/azure-fsi/guides/comparison.md)**
 - **[Changelog](../../docs/azure-fsi/changelog.md)**
 
 ## Configuration
@@ -91,21 +111,22 @@ See the [main documentation](../../docs/azure-fsi/) for detailed requirements.
 
 ## Key Features
 
-### Specialist Expertise
-Each agent brings deep domain knowledge:
-- **DevOps**: Azure DevOps, GitHub Actions, deployment automation
-- **Security**: Azure Defender, Key Vault, compliance policies
-- **Network**: VNets, Firewall, NSGs, private endpoints
-- **Architect**: Design patterns, cost optimization, governance
+### Solo Mode
+- ✅ Fast template generation using Bicep + Azure Verified Modules (AVM)
+- ✅ Ring-based deployment strategy (Ring 0/1/2)
+- ✅ European compliance (GDPR, DORA, PSD2, MiFID II, EBA GL)
+- ✅ Simple, focused operation
+- ✅ Lower cost (single agent invocation)
 
-### Parallel Analysis
-Multiple agents work concurrently for faster results on complex tasks.
-
-### Drift Detection
-Compare local Bicep templates with actual deployed Azure resources to identify configuration drift.
-
-### Comprehensive Reports
-Consolidated analysis across all domains with actionable recommendations.
+### Squad Mode Additional Features
+- ✅ **Specialist Expertise**: Each agent brings deep domain knowledge
+  - **DevOps**: Azure DevOps, GitHub Actions, deployment automation
+  - **Security**: Azure Defender, Key Vault, compliance policies
+  - **Network**: VNets, Firewall, NSGs, private endpoints
+  - **Architect**: Design patterns, cost optimization, governance
+- ✅ **Parallel Analysis**: Multiple agents work concurrently for faster results
+- ✅ **Drift Detection**: Compare local Bicep templates with actual deployed Azure resources
+- ✅ **Comprehensive Reports**: Consolidated analysis across all domains with actionable recommendations
 
 ---
 

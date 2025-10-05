@@ -11,6 +11,7 @@ Landing Zones using:
 import asyncio
 import json
 import sys
+import argparse
 from pathlib import Path
 from typing import List, Any, Optional, Dict
 from datetime import datetime
@@ -39,11 +40,14 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
     - Security and compliance validation
     """
 
-    def __init__(self, config_dir: Path):
+    def __init__(self, config_dir: Path, squad_mode: bool = False):
         super().__init__(config_dir)
         self.azure_config = self.agent_config.get('azure', {})
         self.compliance_config = self.azure_config.get('compliance', {})
         self.deployment_config = self.agent_config.get('deployment', {})
+
+        # Squad mode configuration
+        self.squad_mode = squad_mode
 
         # Track deployment state
         self.deployment_state = {
@@ -2396,6 +2400,23 @@ async def main():
     """
     Main entry point for the Azure FSI Landing Zone agent.
     """
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Azure FSI Landing Zone Deployment Agent",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python agent.py              # Run in solo mode (default)
+  python agent.py --squad      # Run in squad mode with specialist sub-agents
+        """
+    )
+    parser.add_argument(
+        '--squad',
+        action='store_true',
+        help='Enable squad mode with specialist sub-agents (Architect, DevOps, Network, Security)'
+    )
+    args = parser.parse_args()
+
     config_dir = Path(__file__).parent
 
     # Set up logging
@@ -2408,10 +2429,12 @@ async def main():
     )
 
     # Create and run the agent
-    agent = AzureFSILandingZoneAgent(config_dir)
+    agent = AzureFSILandingZoneAgent(config_dir, squad_mode=args.squad)
 
     print("\n" + "="*80)
     print("  🏦 AZURE FSI LANDING ZONE DEPLOYMENT AGENT")
+    if args.squad:
+        print("  🤖 SQUAD MODE: Multi-Agent Collaboration Enabled")
     print("="*80)
     print("\n🎯 Capabilities:")
     print("   • Deploy Microsoft FSI Landing Zone templates")
@@ -2419,6 +2442,14 @@ async def main():
     print("   • Apply European compliance policies (GDPR, DORA, PSD2, MiFID II)")
     print("   • Generate Bicep/Terraform templates")
     print("   • Validate deployments and security posture")
+
+    if args.squad:
+        print("\n🤖 Squad Mode Features:")
+        print("   • 🏗️  Architect Agent: Holistic design and recommendations")
+        print("   • 🚀 DevOps Agent: CI/CD pipelines and automation")
+        print("   • 🔒 Security Agent: Security posture and compliance")
+        print("   • 🌐 Network Agent: Network design and connectivity")
+
     print("\n💬 Try asking me to:")
     print("   - Set a project name (required before generating files)")
     print("   - Check Azure prerequisites")

@@ -9,6 +9,11 @@ model: "claude-sonnet-4-5"
 max_turns: null  # Unlimited turns
 permission_mode: "default"
 
+# Squad mode - Enable multi-agent collaboration
+# Set via CLI: python agent.py --squad
+# When enabled, specialist sub-agents (Architect, DevOps, Network, Security) are available
+squad_mode: false  # Default: solo mode
+
 # Allowed tools (custom tools are auto-added)
 allowed_tools:
   - "Read"
