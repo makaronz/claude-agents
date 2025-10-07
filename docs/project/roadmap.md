@@ -150,6 +150,7 @@ Build a comprehensive collection of production-ready Claude agents for enterpris
 ### New Agents (Q1-Q2 2025)
 
 **Planned Agents**
+- [x] **Ad Agency Project Manager Agent**: Project management for creative agencies ✅ COMPLETED (2025-01-02)
 - [ ] **Azure Cost Optimization Agent**: FinOps automation and recommendations
 - [ ] **Azure Security Posture Agent**: Continuous security assessment
 - [ ] **Azure Backup Validation Agent**: DR testing and validation
@@ -191,8 +192,8 @@ Build a comprehensive collection of production-ready Claude agents for enterpris
 
 | Category | Metric | Value |
 |----------|--------|-------|
-| **Agents** | Total Agents | 4 (template, example, fsi-lz, compliance) |
-| **Tools** | Custom Tools Created | 21 (11 FSI LZ + 10 Compliance) |
+| **Agents** | Total Agents | 5 (template, example, fsi-lz, compliance, ad-agency-pm) |
+| **Tools** | Custom Tools Created | 36 (11 FSI LZ + 10 Compliance + 15 Ad Agency PM) |
 | **Lines of Code** | Python | ~3,500 |
 | **Documentation** | Pages | 15+ (READMEs, guides, alignment docs) |
 | **Compliance** | Regulations Covered | 12+ (GDPR, DORA, PSD2, ACPR, etc.) |
@@ -278,6 +279,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - ✅ European compliance focus (GDPR, DORA, PSD2, MiFID II)
 - ✅ Hub-spoke network templates
 - ✅ Comprehensive documentation
+
+### 2025-01-02: Ad Agency Project Manager Agent
+- ✅ Created comprehensive project management agent for advertising agencies
+- ✅ Implemented 15 custom tools for client, project, task, and team management
+- ✅ Added budget tracking, deadline management, and performance analytics
+- ✅ Created detailed documentation with usage examples
+- ✅ Support for creative agency workflows and team coordination
 
 ### 2025-10-01: Repository Initialization
 - ✅ Established repository structure
