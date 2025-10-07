@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/common/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
-import { Input } from '@/components/common/Input';
+import { Textarea } from '@/components/common/Textarea';
 import { SquadModeToggle } from '@/components/squad/SquadModeToggle';
 import { SpecialistCards } from '@/components/squad/SpecialistCards';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -64,12 +64,12 @@ const Squad: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Input
+                <Textarea
                   value={brief}
                   onChange={(e) => setBrief(e.target.value)}
                   placeholder="Describe your creative project, target audience, objectives..."
                   disabled={isAnalyzing}
-                  className="min-h-[120px]"
+                  rows={6}
                   helperText="Provide as much detail as possible for better analysis"
                 />
                 
