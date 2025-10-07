@@ -74,6 +74,27 @@ Build a comprehensive collection of production-ready Claude agents for enterpris
 - ✅ Compliance mappings to PSD2, GDPR, DORA, ISO 27001, NIS2
 - ✅ Agent now has 15 total tools (up from 11)
 
+#### Azure Verified Modules (AVM) Integration ✅ COMPLETED
+- ✅ **Actual AVM Usage**: Replaced custom Bicep resources with official AVM modules from Bicep Public Registry
+- ✅ **Hub VNet Template**: Using `br/public:avm/res/network/virtual-network:0.1.8`
+- ✅ **Spoke VNet Template**: Using `br/public:avm/res/network/virtual-network:0.1.8` with peering
+- ✅ **Azure Firewall Template**: Using `br/public:avm/res/network/azure-firewall:0.3.0`
+- ✅ **Key Vault Template**: Using `br/public:avm/res/key-vault/vault:0.6.2`
+- ✅ **Storage Account Template**: Using `br/public:avm/res/storage/storage-account:0.9.1`
+- ✅ **System Prompt Updated**: Added explicit AVM module references
+- ✅ **Validation Test Suite**: Created automated Bicep template validation (5/5 passing)
+- ✅ **Documentation**: Comprehensive AVM usage guide with before/after examples
+
+**Status**: COMPLETED (2025-10-07)
+
+**Completed Deliverables**:
+- ✅ 5 Bicep template generators updated to use AVM modules (agent.py lines 1273-1610)
+- ✅ System prompt reflects actual AVM usage (agent.py lines 189-202)
+- ✅ Validation script: `agents/azure-fsi-landingzone/test_avm_templates.py`
+- ✅ Documentation: `docs/azure-fsi/implementation/avm-usage.md`
+- ✅ Changelog: `CHANGELOG_AVM.md`
+- ✅ All templates validated with Azure CLI (`az bicep build`)
+
 ---
 
 ## 📋 Planned (Q1 2025)
@@ -209,11 +230,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📝 Change Log
 
+### 2025-10-07: Azure Verified Modules (AVM) Integration
+- ✅ Implemented actual AVM module usage from Bicep Public Registry
+- ✅ Updated 5 Bicep template generators (Hub VNet, Spoke VNet, Key Vault, Storage, Policies)
+- ✅ Updated system prompt with AVM module references
+- ✅ Created validation test suite (5/5 templates passing)
+- ✅ Documented AVM implementation in `docs/azure-fsi/implementation/avm-usage.md`
+- ✅ Created `CHANGELOG_AVM.md` with detailed changes
+
 ### 2025-10-02: Identity & Access Management
-- 🚧 Added Bastion template generator
-- 🚧 Added Entra ID configuration tools
-- 🚧 Added Conditional Access policies
-- 🚧 Added PIM role assignment helper
+- ✅ Added Bastion template generator
+- ✅ Added Entra ID configuration tools
+- ✅ Added Conditional Access policies
+- ✅ Added PIM role assignment helper
 
 ### 2025-10-02: Azure Compliance Checker Agent
 - ✅ Created compliance validation agent

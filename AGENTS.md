@@ -2,6 +2,34 @@
 
 This file provides guidance to AI coding agents (Claude Code, Gemini CLI, Codex CLI, etc.) when working with code in this repository.
 
+## 📋 Documentation Guidelines
+
+**IMPORTANT**: When working in this repository, your MUST follow these rules:
+
+### 1. Root Documentation Sources
+**Only use these files as root documentation references:**
+- **[README.md](README.md)** - Repository overview, features, and quick start
+- **[CHANGELOG.md](CHANGELOG.md)** - Change history and version tracking
+- **[AGENTS.md](AGENTS.md)** - Dedicated and predictable place to provide the context and instructions to help AI coding agents work on your project
+- **[CLAUDE.md](CLAUDE.md)** - A symlink to AGENTS.md for Claude Code which does not support AGENTS.md naming convention at the time of writing
+
+### 2. Roadmap Updates
+**Always update the roadmap when completing work:**
+- **File**: [docs/project/roadmap.md](docs/project/roadmap.md)
+- **When completing existing tasks**: Tick them (change `[ ]` to `[x]`)
+- **When adding NEW features**:
+  1. Create a new task entry in the appropriate section
+  2. Tick it immediately upon completion (mark as `[x]`)
+  3. Include completion date in change log at bottom
+
+### 3. Documentation Best Practices
+- **Do not create duplicate documentation** in subdirectories unless explicitly requested
+- **Link to existing docs** rather than duplicating content
+- **Keep documentation centralized** in the `docs/` directory
+- **Update existing docs** instead of creating new ones when possible
+
+---
+
 ## Common Commands
 
 ### Setup
