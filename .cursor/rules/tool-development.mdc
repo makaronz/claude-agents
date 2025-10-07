@@ -1,0 +1,554 @@
+---
+globs: agents/**/*.py
+description: Custom tool development patterns and best practices for Claude agents
+---
+
+# 🔧 Custom Tool Development Patterns
+
+## 🛠️ Tool Definition Standards
+
+### Basic Tool Structure
+
+**Use the @tool decorator from claude-agent-sdk:**
+
+```python
+from claude_agent_sdk import tool
+from typing import Dict, Any
+
+@tool("tool_name", "Clear description of what the tool does", {
+    "param1": "str",      # Parameter type
+    "param2": "int",      # Another parameter
+    "param3": "bool"      # Optional parameter
+})
+async def my_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Tool implementation with proper documentation."""
+    try:
+        # Extract and validate parameters
+        param1 = args.get("param1", "")
+        param2 = args.get("param2", 0)
+        param3 = args.get("param3", False)
+        
+        # Input validation
+        if not param1:
+            return {"content": [{"type": "text", "text": "Error: param1 is required"}]}
+        
+        # Tool logic
+        result = self._process_tool_logic(param1, param2, param3)
+        
+        # Log successful execution
+        self.logger.info(f"Tool {self.__class__.__name__}.my_tool executed successfully")
+        
+        return {"content": [{"type": "text", "text": result}]}
+        
+    except Exception as e:
+        error_msg = f"Tool error: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+### Tool Parameter Types
+
+**Supported parameter types:**
+- `"str"` - String parameter
+- `"int"` - Integer parameter  
+- `"float"` - Float parameter
+- `"bool"` - Boolean parameter
+- `"list"` - List parameter
+- `"dict"` - Dictionary parameter
+
+**Example with different types:**
+```python
+@tool("complex_tool", "Tool with various parameter types", {
+    "name": "str",           # Required string
+    "age": "int",            # Required integer
+    "score": "float",        # Required float
+    "is_active": "bool",     # Required boolean
+    "tags": "list",          # Required list
+    "metadata": "dict"       # Required dictionary
+})
+async def complex_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    # Implementation here
+    pass
+```
+
+## 📊 Data Management Tools
+
+### CRUD Operations Pattern
+
+**Create Operation:**
+```python
+@tool("create_item", "Create a new item in the system", {
+    "item_type": "str",
+    "name": "str",
+    "data": "dict"
+})
+async def create_item(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a new item with validation and persistence."""
+    try:
+        item_type = args.get("item_type", "")
+        name = args.get("name", "")
+        data = args.get("data", {})
+        
+        # Validation
+        if not item_type or not name:
+            return {"content": [{"type": "text", "text": "Error: item_type and name are required"}]}
+        
+        # Check for duplicates
+        existing_items = self._load_data(f"{item_type}s")
+        if name in existing_items:
+            return {"content": [{"type": "text", "text": f"Error: {item_type} '{name}' already exists"}]}
+        
+        # Create item
+        item_id = self._generate_id()
+        new_item = {
+            "id": item_id,
+            "name": name,
+            "created_at": self._get_timestamp(),
+            **data
+        }
+        
+        # Save to storage
+        existing_items[name] = new_item
+        self._save_data(f"{item_type}s", existing_items)
+        
+        self.logger.info(f"Created {item_type}: {name}")
+        return {"content": [{"type": "text", "text": f"✅ Created {item_type}: {name} (ID: {item_id})"}]}
+        
+    except Exception as e:
+        error_msg = f"Failed to create {item_type}: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+**Read Operation:**
+```python
+@tool("get_item", "Get item information by name or ID", {
+    "item_type": "str",
+    "identifier": "str"
+})
+async def get_item(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Retrieve item information."""
+    try:
+        item_type = args.get("item_type", "")
+        identifier = args.get("identifier", "")
+        
+        if not item_type or not identifier:
+            return {"content": [{"type": "text", "text": "Error: item_type and identifier are required"}]}
+        
+        # Load data
+        items = self._load_data(f"{item_type}s")
+        
+        # Find item by name or ID
+        item = None
+        for name, data in items.items():
+            if name == identifier or data.get("id") == identifier:
+                item = data
+                break
+        
+        if not item:
+            return {"content": [{"type": "text", "text": f"Error: {item_type} '{identifier}' not found"}]}
+        
+        # Format response
+        response = f"📋 **{item_type.title()} Information**\n\n"
+        response += f"**Name**: {identifier}\n"
+        response += f"**ID**: {item.get('id', 'N/A')}\n"
+        response += f"**Created**: {item.get('created_at', 'N/A')}\n"
+        
+        # Add custom fields
+        for key, value in item.items():
+            if key not in ['id', 'name', 'created_at']:
+                response += f"**{key.title()}**: {value}\n"
+        
+        return {"content": [{"type": "text", "text": response}]}
+        
+    except Exception as e:
+        error_msg = f"Failed to get {item_type}: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+**Update Operation:**
+```python
+@tool("update_item", "Update an existing item", {
+    "item_type": "str",
+    "identifier": "str",
+    "updates": "dict"
+})
+async def update_item(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Update item with new data."""
+    try:
+        item_type = args.get("item_type", "")
+        identifier = args.get("identifier", "")
+        updates = args.get("updates", {})
+        
+        if not item_type or not identifier or not updates:
+            return {"content": [{"type": "text", "text": "Error: All parameters are required"}]}
+        
+        # Load and find item
+        items = self._load_data(f"{item_type}s")
+        item_found = False
+        
+        for name, data in items.items():
+            if name == identifier or data.get("id") == identifier:
+                # Update item
+                data.update(updates)
+                data["updated_at"] = self._get_timestamp()
+                item_found = True
+                break
+        
+        if not item_found:
+            return {"content": [{"type": "text", "text": f"Error: {item_type} '{identifier}' not found"}]}
+        
+        # Save updated data
+        self._save_data(f"{item_type}s", items)
+        
+        self.logger.info(f"Updated {item_type}: {identifier}")
+        return {"content": [{"type": "text", "text": f"✅ Updated {item_type}: {identifier}"}]}
+        
+    except Exception as e:
+        error_msg = f"Failed to update {item_type}: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+**Delete Operation:**
+```python
+@tool("delete_item", "Delete an item from the system", {
+    "item_type": "str",
+    "identifier": "str"
+})
+async def delete_item(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Delete item with confirmation."""
+    try:
+        item_type = args.get("item_type", "")
+        identifier = args.get("identifier", "")
+        
+        if not item_type or not identifier:
+            return {"content": [{"type": "text", "text": "Error: item_type and identifier are required"}]}
+        
+        # Load data
+        items = self._load_data(f"{item_type}s")
+        
+        # Find and remove item
+        item_found = False
+        for name in list(items.keys()):
+            if name == identifier or items[name].get("id") == identifier:
+                del items[name]
+                item_found = True
+                break
+        
+        if not item_found:
+            return {"content": [{"type": "text", "text": f"Error: {item_type} '{identifier}' not found"}]}
+        
+        # Save updated data
+        self._save_data(f"{item_type}s", items)
+        
+        self.logger.info(f"Deleted {item_type}: {identifier}")
+        return {"content": [{"type": "text", "text": f"✅ Deleted {item_type}: {identifier}"}]}
+        
+    except Exception as e:
+        error_msg = f"Failed to delete {item_type}: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+## 📈 Analytics and Reporting Tools
+
+### Data Analysis Tools
+
+```python
+@tool("analyze_data", "Analyze data and generate insights", {
+    "data_type": "str",
+    "analysis_type": "str",
+    "filters": "dict"
+})
+async def analyze_data(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze data with various analysis types."""
+    try:
+        data_type = args.get("data_type", "")
+        analysis_type = args.get("analysis_type", "summary")
+        filters = args.get("filters", {})
+        
+        # Load data
+        data = self._load_data(data_type)
+        
+        if not data:
+            return {"content": [{"type": "text", "text": f"No {data_type} data found"}]}
+        
+        # Apply filters
+        filtered_data = self._apply_filters(data, filters)
+        
+        # Perform analysis
+        if analysis_type == "summary":
+            result = self._generate_summary(filtered_data)
+        elif analysis_type == "trends":
+            result = self._analyze_trends(filtered_data)
+        elif analysis_type == "performance":
+            result = self._analyze_performance(filtered_data)
+        else:
+            return {"content": [{"type": "text", "text": f"Unknown analysis type: {analysis_type}"}]}
+        
+        return {"content": [{"type": "text", "text": result}]}
+        
+    except Exception as e:
+        error_msg = f"Analysis failed: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+### Report Generation Tools
+
+```python
+@tool("generate_report", "Generate comprehensive report", {
+    "report_type": "str",
+    "date_range": "dict",
+    "format": "str"
+})
+async def generate_report(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate formatted reports."""
+    try:
+        report_type = args.get("report_type", "")
+        date_range = args.get("date_range", {})
+        format_type = args.get("format", "text")
+        
+        # Generate report content
+        report_content = self._build_report(report_type, date_range)
+        
+        # Format based on requested format
+        if format_type == "markdown":
+            formatted_report = self._format_markdown(report_content)
+        elif format_type == "json":
+            formatted_report = self._format_json(report_content)
+        else:
+            formatted_report = self._format_text(report_content)
+        
+        # Save report
+        report_filename = f"{report_type}_{self._get_timestamp()}.{format_type}"
+        self._save_report(report_filename, formatted_report)
+        
+        self.logger.info(f"Generated {report_type} report")
+        return {"content": [{"type": "text", "text": f"📊 Report generated: {report_filename}\n\n{formatted_report}"}]}
+        
+    except Exception as e:
+        error_msg = f"Report generation failed: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+## 🔄 Workflow Tools
+
+### Task Management Tools
+
+```python
+@tool("create_task", "Create a new task with assignment", {
+    "task_name": "str",
+    "description": "str",
+    "assignee": "str",
+    "deadline": "str",
+    "priority": "str"
+})
+async def create_task(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Create and assign a new task."""
+    try:
+        task_name = args.get("task_name", "")
+        description = args.get("description", "")
+        assignee = args.get("assignee", "")
+        deadline = args.get("deadline", "")
+        priority = args.get("priority", "medium")
+        
+        # Validation
+        if not task_name or not description:
+            return {"content": [{"type": "text", "text": "Error: task_name and description are required"}]}
+        
+        # Create task
+        task_id = self._generate_id()
+        new_task = {
+            "id": task_id,
+            "name": task_name,
+            "description": description,
+            "assignee": assignee,
+            "deadline": deadline,
+            "priority": priority,
+            "status": "pending",
+            "created_at": self._get_timestamp()
+        }
+        
+        # Save task
+        tasks = self._load_data("tasks")
+        tasks[task_id] = new_task
+        self._save_data("tasks", tasks)
+        
+        # Update assignee workload
+        if assignee:
+            self._update_assignee_workload(assignee, task_id)
+        
+        response = f"✅ **Task Created**\n\n"
+        response += f"**Task**: {task_name}\n"
+        response += f"**ID**: {task_id}\n"
+        response += f"**Assignee**: {assignee or 'Unassigned'}\n"
+        response += f"**Deadline**: {deadline or 'Not set'}\n"
+        response += f"**Priority**: {priority.title()}\n"
+        
+        return {"content": [{"type": "text", "text": response}]}
+        
+    except Exception as e:
+        error_msg = f"Failed to create task: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+### Status Update Tools
+
+```python
+@tool("update_task_status", "Update task status and progress", {
+    "task_id": "str",
+    "status": "str",
+    "progress": "int",
+    "notes": "str"
+})
+async def update_task_status(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Update task status with progress tracking."""
+    try:
+        task_id = args.get("task_id", "")
+        status = args.get("status", "")
+        progress = args.get("progress", 0)
+        notes = args.get("notes", "")
+        
+        if not task_id or not status:
+            return {"content": [{"type": "text", "text": "Error: task_id and status are required"}]}
+        
+        # Load and find task
+        tasks = self._load_data("tasks")
+        if task_id not in tasks:
+            return {"content": [{"type": "text", "text": f"Error: Task {task_id} not found"}]}
+        
+        # Update task
+        task = tasks[task_id]
+        task["status"] = status
+        task["progress"] = progress
+        task["updated_at"] = self._get_timestamp()
+        
+        if notes:
+            if "notes" not in task:
+                task["notes"] = []
+            task["notes"].append({
+                "timestamp": self._get_timestamp(),
+                "note": notes
+            })
+        
+        # Save updated task
+        self._save_data("tasks", tasks)
+        
+        response = f"✅ **Task Updated**\n\n"
+        response += f"**Task**: {task['name']}\n"
+        response += f"**Status**: {status.title()}\n"
+        response += f"**Progress**: {progress}%\n"
+        if notes:
+            response += f"**Notes**: {notes}\n"
+        
+        return {"content": [{"type": "text", "text": response}]}
+        
+    except Exception as e:
+        error_msg = f"Failed to update task: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+## 🧪 Tool Testing Patterns
+
+### Unit Testing Tools
+
+```python
+async def test_tool_functionality():
+    """Test tool with various inputs."""
+    agent = MyAgent()
+    
+    # Test successful case
+    result = await agent.my_tool({
+        "param1": "test_value",
+        "param2": 42,
+        "param3": True
+    })
+    
+    assert "content" in result
+    assert len(result["content"]) > 0
+    assert result["content"][0]["type"] == "text"
+    
+    # Test error case
+    error_result = await agent.my_tool({
+        "param1": "",  # Invalid input
+        "param2": 0
+    })
+    
+    assert "Error" in error_result["content"][0]["text"]
+```
+
+### Integration Testing
+
+```python
+async def test_tool_integration():
+    """Test tool integration with data storage."""
+    agent = MyAgent()
+    
+    # Create item
+    create_result = await agent.create_item({
+        "item_type": "client",
+        "name": "Test Client",
+        "data": {"email": "test@example.com"}
+    })
+    
+    assert "Created" in create_result["content"][0]["text"]
+    
+    # Retrieve item
+    get_result = await agent.get_item({
+        "item_type": "client",
+        "identifier": "Test Client"
+    })
+    
+    assert "Test Client" in get_result["content"][0]["text"]
+    assert "test@example.com" in get_result["content"][0]["text"]
+```
+
+## 🔒 Security and Validation
+
+### Input Sanitization
+
+```python
+def _sanitize_input(self, input_data: str) -> str:
+    """Sanitize user input to prevent injection attacks."""
+    if not isinstance(input_data, str):
+        return str(input_data)
+    
+    # Remove potentially dangerous characters
+    dangerous_chars = ['<', '>', '"', "'", '&', ';', '|', '`', '$']
+    sanitized = input_data
+    
+    for char in dangerous_chars:
+        sanitized = sanitized.replace(char, '')
+    
+    # Limit length
+    if len(sanitized) > 10000:
+        sanitized = sanitized[:10000] + "..."
+    
+    return sanitized.strip()
+```
+
+### Data Validation
+
+```python
+def _validate_data(self, data: Dict[str, Any], schema: Dict[str, str]) -> tuple[bool, str]:
+    """Validate data against schema."""
+    for field, expected_type in schema.items():
+        if field not in data:
+            return False, f"Missing required field: {field}"
+        
+        value = data[field]
+        if expected_type == "str" and not isinstance(value, str):
+            return False, f"Field {field} must be a string"
+        elif expected_type == "int" and not isinstance(value, int):
+            return False, f"Field {field} must be an integer"
+        elif expected_type == "bool" and not isinstance(value, bool):
+            return False, f"Field {field} must be a boolean"
+    
+    return True, ""
+```

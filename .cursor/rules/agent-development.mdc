@@ -1,0 +1,338 @@
+---
+alwaysApply: true
+---
+# 🤖 Agent Development Patterns
+
+## 🏗️ Agent Class Structure
+
+### Base Class Inheritance
+
+**Always inherit from the appropriate base class:**
+
+```python
+from shared.agents import InteractiveAgent
+from pathlib import Path
+from typing import Dict, Any, List, Optional
+
+class MyAgent(InteractiveAgent):
+    def __init__(self, config_dir: Optional[Path] = None, squad_mode: bool = False):
+        super().__init__(config_dir)
+        self.squad_mode = squad_mode
+        self.logger.info("MyAgent initialized")
+```
+
+### Configuration Loading
+
+**Use the built-in configuration system:**
+
+```python
+# config.yaml structure
+name: My Agent
+description: Agent description
+version: 0.1.0
+model: claude-3-5-sonnet-20240620
+allowed_tools:
+  - mcp__my_agent_tools__my_tool
+system_prompt: |
+  You are my AI agent...
+permission_mode: default
+max_turns: 20
+```
+
+## 🔧 Custom Tools Development
+
+### Tool Definition Pattern
+
+**Use the @tool decorator from claude-agent-sdk:**
+
+```python
+from claude_agent_sdk import tool
+
+@tool("tool_name", "Tool description", {
+    "param1": "str",
+    "param2": "int"
+})
+async def my_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Tool implementation with proper error handling."""
+    try:
+        param1 = args.get("param1", "")
+        param2 = args.get("param2", 0)
+        
+        # Tool logic here
+        result = f"Processed {param1} with {param2}"
+        
+        self.logger.info(f"Tool executed: {result}")
+        return {"content": [{"type": "text", "text": result}]}
+        
+    except Exception as e:
+        error_msg = f"Tool error: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+### Tool Registration
+
+**Register tools in get_custom_tools method:**
+
+```python
+def get_custom_tools(self) -> List[Any]:
+    """Return list of custom tools for this agent."""
+    tools = [
+        self.my_tool,
+        self.another_tool,
+    ]
+    
+    # Add squad mode tools if enabled
+    if self.squad_mode:
+        tools.extend([
+            self.delegate_to_specialist,
+            self.run_squad_review,
+        ])
+    
+    return tools
+```
+
+## 📊 Data Management Patterns
+
+### Local Data Storage
+
+**Use JSON files for persistent data:**
+
+```python
+import json
+from pathlib import Path
+
+def _load_data(self, filename: str) -> Dict[str, Any]:
+    """Load data from JSON file."""
+    data_file = self.data_dir / f"{filename}.json"
+    if data_file.exists():
+        with open(data_file, 'r') as f:
+            return json.load(f)
+    return {}
+
+def _save_data(self, filename: str, data: Dict[str, Any]) -> None:
+    """Save data to JSON file."""
+    self.data_dir.mkdir(exist_ok=True)
+    data_file = self.data_dir / f"{filename}.json"
+    with open(data_file, 'w') as f:
+        json.dump(data, f, indent=2)
+    self.logger.info(f"Data saved to {data_file}")
+```
+
+### Data Directory Structure
+
+```
+data/
+├── clients.json
+├── projects.json
+├── tasks.json
+├── teams.json
+└── budgets.json
+```
+
+## 🎭 Squad Mode Implementation
+
+### Squad Mode Initialization
+
+**Lazy-load sub-agents only when needed:**
+
+```python
+def _initialize_squad(self) -> None:
+    """Initialize squad mode with sub-agents."""
+    if not self.squad_mode:
+        return
+        
+    self.squad_agents = {}
+    sub_agents_dir = self.config_dir / "sub-agents"
+    
+    if not sub_agents_dir.exists():
+        self.logger.warning("Sub-agents directory not found")
+        return
+    
+    for agent_dir in sub_agents_dir.iterdir():
+        if agent_dir.is_dir():
+            try:
+                # Dynamic module loading for hyphenated names
+                import importlib.util
+                agent_file = agent_dir / "agent.py"
+                spec = importlib.util.spec_from_file_location(
+                    agent_dir.name.replace("-", "_"), agent_file
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                # Initialize agent
+                agent_class = getattr(module, f"{agent_dir.name.replace('-', '').title()}Agent")
+                agent_instance = agent_class(agent_dir)
+                self.squad_agents[agent_dir.name] = agent_instance
+                
+            except Exception as e:
+                self.logger.error(f"Failed to load sub-agent {agent_dir.name}: {e}")
+```
+
+### Delegation Tools
+
+**Create delegation tools for specialist agents:**
+
+```python
+@tool("delegate_to_specialist", "Delegate task to a specialist agent", {
+    "specialist": "str",
+    "task": "str",
+    "context": "str"
+})
+async def delegate_to_specialist(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Delegate task to specific specialist agent."""
+    if not self.squad_mode:
+        return {"content": [{"type": "text", "text": "Squad mode not enabled"}]}
+    
+    specialist = args.get("specialist", "")
+    task = args.get("task", "")
+    context = args.get("context", "")
+    
+    if specialist not in self.squad_agents:
+        return {"content": [{"type": "text", "text": f"Specialist {specialist} not available"}]}
+    
+    try:
+        result = await self._delegate_to_specialist(specialist, task, context)
+        return {"content": [{"type": "text", "text": result}]}
+    except Exception as e:
+        error_msg = f"Delegation failed: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+## 🚀 Main Entry Point Pattern
+
+### Standard Main Function
+
+```python
+async def main():
+    """Main entry point for the agent."""
+    import sys
+    
+    # Check for squad mode flag
+    squad_mode = "--squad" in sys.argv
+    
+    config_dir = Path("agents/agent-name")
+    agent = MyAgent(config_dir, squad_mode=squad_mode)
+    
+    if squad_mode:
+        print("🎭 MyAgent - SQUAD MODE")
+        print("=" * 50)
+        print("Welcome! I'm your AI agent with specialist squad...")
+    else:
+        print("🎯 MyAgent - SOLO MODE")
+        print("=" * 50)
+        print("Welcome! I'm your AI agent...")
+    
+    print("\nType 'help' for more information or start with your request!")
+    print("=" * 50)
+    
+    try:
+        await agent.run_interactive()
+    except KeyboardInterrupt:
+        print("\n👋 Goodbye!")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        agent.logger.error(f"Agent error: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## 📝 Logging Best Practices
+
+### Structured Logging
+
+```python
+# Use the shared logging utility
+from shared.utils.logging import get_logger
+
+class MyAgent(InteractiveAgent):
+    def __init__(self, config_dir: Optional[Path] = None):
+        super().__init__(config_dir)
+        self.logger = get_logger(self.__class__.__name__)
+        
+    def some_method(self):
+        self.logger.info("Method started")
+        try:
+            # Do work
+            self.logger.info("Work completed successfully")
+        except Exception as e:
+            self.logger.error(f"Error in method: {e}")
+            raise
+```
+
+## 🧪 Error Handling Patterns
+
+### Tool Error Handling
+
+```python
+@tool("risky_tool", "Tool that might fail", {"input": "str"})
+async def risky_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Tool with comprehensive error handling."""
+    try:
+        input_data = args.get("input", "")
+        
+        if not input_data:
+            return {"content": [{"type": "text", "text": "Error: Input is required"}]}
+        
+        # Validate input
+        if len(input_data) > 1000:
+            return {"content": [{"type": "text", "text": "Error: Input too long"}]}
+        
+        # Process input
+        result = self._process_input(input_data)
+        
+        self.logger.info(f"Tool executed successfully: {result}")
+        return {"content": [{"type": "text", "text": result}]}
+        
+    except ValueError as e:
+        error_msg = f"Validation error: {str(e)}"
+        self.logger.warning(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+        
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": "An error occurred. Please try again."}]}
+```
+
+## 🔒 Security Considerations
+
+### Input Validation
+
+```python
+def _validate_input(self, data: Any, expected_type: type) -> bool:
+    """Validate input data type and content."""
+    if not isinstance(data, expected_type):
+        return False
+    
+    if isinstance(data, str):
+        # Sanitize string input
+        return len(data.strip()) > 0 and len(data) < 10000
+    
+    return True
+```
+
+### Safe File Operations
+
+```python
+def _safe_file_operation(self, file_path: Path, operation: str) -> bool:
+    """Safely perform file operations."""
+    try:
+        # Ensure file is within data directory
+        if not str(file_path).startswith(str(self.data_dir)):
+            self.logger.error(f"File path outside data directory: {file_path}")
+            return False
+        
+        # Check file size
+        if file_path.exists() and file_path.stat().st_size > 10 * 1024 * 1024:  # 10MB
+            self.logger.error(f"File too large: {file_path}")
+            return False
+        
+        return True
+    except Exception as e:
+        self.logger.error(f"File operation error: {e}")
+        return False
+```

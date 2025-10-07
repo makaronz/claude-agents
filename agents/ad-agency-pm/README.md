@@ -2,9 +2,14 @@
 
 An AI-powered project management assistant specifically designed for advertising agencies. This agent helps manage clients, projects, tasks, deadlines, team coordination, and budget tracking for creative agencies.
 
+**🆕 NEW: Squad Mode** - Multi-agent creative collaboration with 6 specialist AI agents!
+
 ## 🎯 Overview
 
-The Ad Agency Project Manager Agent is built to handle the unique challenges of managing creative projects in advertising agencies, including:
+The Ad Agency Project Manager Agent operates in two modes:
+
+### 🎯 Solo Mode (Traditional Project Management)
+Built to handle the unique challenges of managing creative projects in advertising agencies, including:
 
 - **Client Management**: Track client information, preferences, and project history
 - **Project Planning**: Create and manage campaigns from concept to completion
@@ -14,9 +19,21 @@ The Ad Agency Project Manager Agent is built to handle the unique challenges of 
 - **Timeline Management**: Set deadlines, track progress, and identify bottlenecks
 - **Reporting**: Generate comprehensive reports for clients and internal use
 
+### 🎭 Squad Mode (Multi-Agent Creative Collaboration)
+Revolutionary multi-agent system where one brief is processed by 6 specialist AI agents:
+
+- **Account Manager**: Brief analysis, client communication, requirement extraction
+- **Creative Director**: Creative strategy, concept synthesis, overall vision
+- **Art Director**: Visual concepts, design direction, moodboards
+- **Copywriter**: Messaging, copy creation, tone of voice
+- **Strategy Planner**: Market analysis, target audience, media strategy
+- **Production Manager**: Timeline, resource allocation, production coordination
+
+**Workflow**: Send a creative brief → Squad analyzes in parallel → Creative Director synthesizes → Complete campaign strategy delivered!
+
 ## 🚀 Features
 
-### Core Capabilities
+### 🎯 Solo Mode Capabilities
 
 - ✅ **Client Management**: Create and manage client profiles with contact info and preferences
 - ✅ **Project Lifecycle**: Full project management from creation to completion
@@ -27,6 +44,17 @@ The Ad Agency Project Manager Agent is built to handle the unique challenges of 
 - ✅ **Performance Analytics**: Analyze team and project performance metrics
 - ✅ **Meeting Scheduling**: Schedule and manage team and client meetings
 - ✅ **Reporting**: Generate detailed reports for projects and agency overview
+
+### 🎭 Squad Mode Capabilities
+
+- ✅ **Multi-Agent Collaboration**: 6 specialist AI agents working together
+- ✅ **Parallel Analysis**: Multiple agents analyze brief simultaneously for speed
+- ✅ **Specialized Expertise**: Each agent has deep knowledge in their discipline
+- ✅ **Creative Synthesis**: Creative Director combines all insights into cohesive strategy
+- ✅ **Workflow Orchestration**: Sequential and parallel workflow patterns
+- ✅ **Context Sharing**: All agents share project context automatically
+- ✅ **Delegation Tools**: Direct delegation to specific specialists
+- ✅ **Squad Reviews**: Comprehensive analysis with all agents
 
 ### Project Types Supported
 
@@ -72,9 +100,17 @@ The Ad Agency Project Manager Agent is built to handle the unique challenges of 
    ```
 
 3. **Run the agent**:
+   
+   **Solo Mode** (Traditional Project Management):
    ```bash
    cd agents/ad-agency-pm
    python agent.py
+   ```
+   
+   **Squad Mode** (Multi-Agent Creative Collaboration):
+   ```bash
+   cd agents/ad-agency-pm
+   python agent.py --squad
    ```
 
 ## 📋 Usage Examples
@@ -294,6 +330,83 @@ Task Breakdown:
    - Performance analysis and reporting
    - Lessons learned documentation
    - Future recommendations
+
+## 🎭 Squad Mode Examples
+
+### 1. Creative Brief Processing
+
+```
+💬 You: We need a campaign for a new eco-friendly sneaker brand targeting Gen Z. Budget $50k, 6-week timeline.
+
+🤖 Agent: I'll coordinate the creative squad to develop a comprehensive campaign strategy.
+
+🎭 **Squad Analysis in Progress...**
+
+**Account Manager**: Brief analyzed - eco-friendly sneakers, Gen Z target, $50k budget, 6 weeks
+**Creative Director**: Strategic direction - sustainability meets street culture
+**Art Director**: Visual concepts - nature-inspired palettes, urban photography
+**Copywriter**: Messaging - "Step Light, Live Right" tagline, sustainability focus
+**Strategy Planner**: Media strategy - TikTok, Instagram, influencer partnerships
+**Production Manager**: Timeline - 2 weeks concept, 2 weeks production, 2 weeks launch
+
+🎯 **Squad Synthesis** (Creative Director):
+Complete campaign strategy delivered with visual concepts, messaging, media plan, and production timeline.
+```
+
+### 2. Brand Identity Development
+
+```
+💬 You: Create a brand identity for a premium coffee roastery targeting urban professionals.
+
+🤖 Agent: I'll delegate this to the creative squad for comprehensive brand development.
+
+🎭 **Squad Review**:
+- **Account Manager**: Target audience analysis - urban professionals, coffee enthusiasts
+- **Creative Director**: Brand positioning - premium, artisanal, sophisticated
+- **Art Director**: Visual identity - minimalist, warm tones, coffee bean motifs
+- **Copywriter**: Brand voice - sophisticated, knowledgeable, approachable
+- **Strategy Planner**: Market positioning - premium segment, direct-to-consumer
+- **Production Manager**: Brand rollout - 4-week development, phased launch
+
+🎯 **Deliverables**: Complete brand guidelines, logo concepts, tone of voice, and launch strategy.
+```
+
+### 3. Social Media Campaign
+
+```
+💬 You: Develop a social media campaign for a fitness app launch targeting millennials.
+
+🤖 Agent: I'll run a squad review to create a comprehensive social media strategy.
+
+🎭 **Parallel Squad Analysis**:
+All 6 agents analyze the brief simultaneously and provide specialized insights:
+
+**Account Manager**: Millennial fitness trends, app market analysis
+**Creative Director**: Campaign theme - "Your Journey, Your Pace"
+**Art Director**: Visual style - motivational, diverse, lifestyle photography
+**Copywriter**: Content pillars - motivation, education, community
+**Strategy Planner**: Platform strategy - Instagram, TikTok, YouTube, Facebook
+**Production Manager**: Content calendar - 8-week campaign, daily posts
+
+🎯 **Squad Synthesis**: Complete social media strategy with content calendar, visual guidelines, and performance metrics.
+```
+
+### 4. Direct Specialist Delegation
+
+```
+💬 You: I need the Art Director to create moodboards for a luxury hotel rebrand.
+
+🤖 Agent: I'll delegate this directly to the Art Director.
+
+🎨 **Art Director Response**:
+Creating luxury hotel moodboards with:
+- Color palette: Deep blues, gold accents, warm neutrals
+- Typography: Elegant serif fonts, clean sans-serif for body
+- Imagery: Architectural details, luxury amenities, sophisticated lifestyle
+- Style: Modern luxury, timeless elegance, premium feel
+
+🎯 **Deliverables**: 3 moodboard concepts with color swatches, typography samples, and image references.
+```
 
 ## 📊 Data Management
 

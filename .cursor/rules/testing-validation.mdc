@@ -1,0 +1,584 @@
+---
+globs: tests/**/*.py,agents/**/test_*.py,**/test_*.py
+description: Testing and validation patterns for Claude agents
+---
+
+# 🧪 Testing and Validation Patterns
+
+## 🏗️ Test Structure and Organization
+
+### Test Directory Structure
+
+```
+tests/
+├── test_repository.py          # Main repository tests
+├── test_shared_utils.py        # Shared utilities tests
+└── agents/                     # Agent-specific tests
+    ├── test_example_agent.py
+    ├── test_azure_fsi_agent.py
+    └── test_ad_agency_pm.py
+```
+
+### Test File Naming Convention
+
+- **Test files**: `test_*.py` or `*_test.py`
+- **Test classes**: `Test*` (e.g., `TestSharedUtils`)
+- **Test methods**: `test_*` (e.g., `test_config_loading`)
+
+## 🔧 Async Testing Patterns
+
+### Basic Async Test Structure
+
+```python
+import pytest
+import asyncio
+from unittest.mock import patch, AsyncMock
+from pathlib import Path
+
+@pytest.mark.asyncio
+async def test_agent_initialization():
+    """Test agent initialization with proper configuration."""
+    from shared.agents import InteractiveAgent
+    
+    config_dir = Path("agents/example-agent")
+    agent = InteractiveAgent(config_dir)
+    
+    assert agent is not None
+    assert agent.config_dir == config_dir
+    assert agent.logger is not None
+```
+
+### Testing Agent Tools
+
+```python
+@pytest.mark.asyncio
+async def test_custom_tool_execution():
+    """Test custom tool execution with various inputs."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir)
+    
+    # Test successful tool execution
+    result = await agent.create_client({
+        "name": "Test Client",
+        "email": "test@example.com",
+        "industry": "Technology"
+    })
+    
+    assert "content" in result
+    assert len(result["content"]) > 0
+    assert result["content"][0]["type"] == "text"
+    assert "Created" in result["content"][0]["text"]
+```
+
+### Testing Error Handling
+
+```python
+@pytest.mark.asyncio
+async def test_tool_error_handling():
+    """Test tool error handling with invalid inputs."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir)
+    
+    # Test with missing required parameters
+    result = await agent.create_client({
+        "name": "",  # Invalid empty name
+        "email": "invalid-email"  # Invalid email format
+    })
+    
+    assert "content" in result
+    assert "Error" in result["content"][0]["text"]
+```
+
+## 🎭 Squad Mode Testing
+
+### Squad Mode Initialization Testing
+
+```python
+@pytest.mark.asyncio
+async def test_squad_mode_initialization():
+    """Test squad mode initialization and sub-agent loading."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
+    
+    # Test squad mode is enabled
+    assert agent.squad_mode == True
+    
+    # Test sub-agents are loaded
+    assert len(agent.squad_agents) > 0
+    
+    # Test specific sub-agents
+    expected_agents = [
+        "account-manager",
+        "creative-director", 
+        "art-director",
+        "copywriter",
+        "strategy-planner",
+        "production-manager"
+    ]
+    
+    for agent_name in expected_agents:
+        assert agent_name in agent.squad_agents
+        assert agent.squad_agents[agent_name] is not None
+```
+
+### Delegation Testing
+
+```python
+@pytest.mark.asyncio
+async def test_delegation_tools():
+    """Test delegation tools in squad mode."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
+    
+    # Test delegation tools are available
+    tools = agent.get_custom_tools()
+    delegation_tools = [tool for tool in tools if 'delegate' in tool.name]
+    
+    assert len(delegation_tools) > 0
+    
+    # Test specific delegation tool
+    result = await agent.delegate_to_account_manager({
+        "task": "Analyze client brief",
+        "context": "New eco-friendly sneaker brand"
+    })
+    
+    assert "content" in result
+    assert len(result["content"]) > 0
+```
+
+### Parallel Analysis Testing
+
+```python
+@pytest.mark.asyncio
+async def test_parallel_analysis():
+    """Test parallel analysis across multiple agents."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
+    
+    # Test parallel analysis
+    agent_names = ["creative-director", "art-director", "copywriter"]
+    results = await agent._parallel_analysis(
+        agent_names,
+        "Create brand identity for luxury hotel",
+        "Premium hospitality brand targeting business travelers"
+    )
+    
+    assert isinstance(results, dict)
+    assert len(results) > 0
+    
+    # Check that all requested agents provided results
+    for agent_name in agent_names:
+        if agent_name in agent.squad_agents:  # Only check if agent is available
+            assert agent_name in results
+            assert isinstance(results[agent_name], str)
+            assert len(results[agent_name]) > 0
+```
+
+## 🔍 Mocking and Patching
+
+### Environment Variable Mocking
+
+```python
+@patch.dict('os.environ', {
+    'ANTHROPIC_API_KEY': 'test-api-key',
+    'AGENT_CONFIG_PATH': '/test/path'
+})
+def test_environment_variable_loading():
+    """Test environment variable loading and configuration."""
+    from shared.utils.config import load_config
+    
+    config = load_config()
+    
+    assert config.get('api_key') == 'test-api-key'
+    assert config.get('config_path') == '/test/path'
+```
+
+### File System Mocking
+
+```python
+@patch('pathlib.Path.exists')
+@patch('pathlib.Path.read_text')
+def test_config_file_loading(mock_read_text, mock_exists):
+    """Test configuration file loading with mocked file system."""
+    mock_exists.return_value = True
+    mock_read_text.return_value = """
+    name: Test Agent
+    version: 1.0.0
+    model: claude-3-5-sonnet-20240620
+    """
+    
+    from shared.utils.config import load_yaml_config
+    
+    config = load_yaml_config(Path("test-config.yaml"))
+    
+    assert config['name'] == 'Test Agent'
+    assert config['version'] == '1.0.0'
+    assert config['model'] == 'claude-3-5-sonnet-20240620'
+```
+
+### Async Mocking
+
+```python
+@pytest.mark.asyncio
+async def test_async_operation_mocking():
+    """Test async operations with mocked responses."""
+    from unittest.mock import AsyncMock
+    
+    # Mock async function
+    mock_async_function = AsyncMock(return_value="mocked result")
+    
+    # Test the mocked function
+    result = await mock_async_function("test input")
+    
+    assert result == "mocked result"
+    mock_async_function.assert_called_once_with("test input")
+```
+
+## 📊 Data Validation Testing
+
+### JSON Data Validation
+
+```python
+def test_json_data_validation():
+    """Test JSON data loading and validation."""
+    from shared.utils.validation import validate_json_data
+    
+    # Valid JSON data
+    valid_data = {
+        "name": "Test Client",
+        "email": "test@example.com",
+        "industry": "Technology"
+    }
+    
+    is_valid, error = validate_json_data(valid_data, {
+        "name": "str",
+        "email": "str", 
+        "industry": "str"
+    })
+    
+    assert is_valid == True
+    assert error == ""
+    
+    # Invalid JSON data
+    invalid_data = {
+        "name": "Test Client",
+        "email": 123,  # Should be string
+        "industry": "Technology"
+    }
+    
+    is_valid, error = validate_json_data(invalid_data, {
+        "name": "str",
+        "email": "str",
+        "industry": "str"
+    })
+    
+    assert is_valid == False
+    assert "email" in error
+```
+
+### File Operations Testing
+
+```python
+def test_file_operations():
+    """Test file operations with temporary files."""
+    import tempfile
+    import json
+    from pathlib import Path
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Test data saving
+        test_data = {"test": "data", "number": 42}
+        data_file = temp_path / "test.json"
+        
+        with open(data_file, 'w') as f:
+            json.dump(test_data, f)
+        
+        # Test data loading
+        with open(data_file, 'r') as f:
+            loaded_data = json.load(f)
+        
+        assert loaded_data == test_data
+        assert data_file.exists()
+```
+
+## 🚀 Integration Testing
+
+### End-to-End Agent Testing
+
+```python
+@pytest.mark.asyncio
+async def test_agent_end_to_end():
+    """Test complete agent workflow from initialization to response."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir)
+    
+    # Test complete workflow
+    # 1. Create client
+    client_result = await agent.create_client({
+        "name": "Integration Test Client",
+        "email": "integration@test.com",
+        "industry": "Technology"
+    })
+    
+    assert "Created" in client_result["content"][0]["text"]
+    
+    # 2. Create project
+    project_result = await agent.create_project({
+        "name": "Integration Test Project",
+        "client_name": "Integration Test Client",
+        "type": "Brand Identity",
+        "budget": 50000
+    })
+    
+    assert "Created" in project_result["content"][0]["text"]
+    
+    # 3. Create task
+    task_result = await agent.create_task({
+        "name": "Integration Test Task",
+        "project_name": "Integration Test Project",
+        "assignee": "Test User",
+        "deadline": "2025-02-01"
+    })
+    
+    assert "Created" in task_result["content"][0]["text"]
+    
+    # 4. Generate report
+    report_result = await agent.generate_project_report({
+        "project_name": "Integration Test Project"
+    })
+    
+    assert "Report" in report_result["content"][0]["text"]
+```
+
+### Squad Mode Integration Testing
+
+```python
+@pytest.mark.asyncio
+async def test_squad_mode_integration():
+    """Test complete squad mode workflow."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
+    
+    # Test squad review workflow
+    squad_result = await agent.run_creative_squad_review({
+        "task": "Create comprehensive brand strategy",
+        "context": "New sustainable fashion brand targeting millennials"
+    })
+    
+    assert "content" in squad_result
+    assert len(squad_result["content"]) > 0
+    
+    # Verify squad synthesis
+    result_text = squad_result["content"][0]["text"]
+    assert "Squad" in result_text or "Analysis" in result_text
+```
+
+## 🔒 Security Testing
+
+### Input Sanitization Testing
+
+```python
+def test_input_sanitization():
+    """Test input sanitization for security."""
+    from shared.utils.security import sanitize_input
+    
+    # Test dangerous characters
+    dangerous_input = "<script>alert('xss')</script>"
+    sanitized = sanitize_input(dangerous_input)
+    
+    assert "<script>" not in sanitized
+    assert "alert" not in sanitized
+    
+    # Test SQL injection attempts
+    sql_input = "'; DROP TABLE users; --"
+    sanitized = sanitize_input(sql_input)
+    
+    assert "DROP TABLE" not in sanitized
+    assert ";" not in sanitized
+```
+
+### File Path Security Testing
+
+```python
+def test_file_path_security():
+    """Test file path security to prevent directory traversal."""
+    from shared.utils.security import validate_file_path
+    
+    # Valid paths
+    valid_paths = [
+        "data/clients.json",
+        "logs/agent.log",
+        "config/settings.yaml"
+    ]
+    
+    for path in valid_paths:
+        assert validate_file_path(Path(path)) == True
+    
+    # Invalid paths (directory traversal)
+    invalid_paths = [
+        "../../../etc/passwd",
+        "..\\..\\windows\\system32",
+        "/etc/shadow",
+        "C:\\Windows\\System32"
+    ]
+    
+    for path in invalid_paths:
+        assert validate_file_path(Path(path)) == False
+```
+
+## 📈 Performance Testing
+
+### Tool Performance Testing
+
+```python
+import time
+import asyncio
+
+@pytest.mark.asyncio
+async def test_tool_performance():
+    """Test tool execution performance."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir)
+    
+    # Test tool execution time
+    start_time = time.time()
+    
+    result = await agent.create_client({
+        "name": "Performance Test Client",
+        "email": "perf@test.com",
+        "industry": "Technology"
+    })
+    
+    end_time = time.time()
+    execution_time = end_time - start_time
+    
+    # Tool should execute within reasonable time
+    assert execution_time < 5.0  # 5 seconds max
+    assert "Created" in result["content"][0]["text"]
+```
+
+### Squad Mode Performance Testing
+
+```python
+@pytest.mark.asyncio
+async def test_squad_mode_performance():
+    """Test squad mode performance with parallel execution."""
+    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
+    
+    # Test parallel analysis performance
+    start_time = time.time()
+    
+    results = await agent._parallel_analysis(
+        ["creative-director", "art-director", "copywriter"],
+        "Performance test task",
+        "Testing parallel execution speed"
+    )
+    
+    end_time = time.time()
+    execution_time = end_time - start_time
+    
+    # Parallel execution should be faster than sequential
+    assert execution_time < 30.0  # 30 seconds max for 3 agents
+    assert len(results) > 0
+```
+
+## 🧪 Test Fixtures and Utilities
+
+### Common Test Fixtures
+
+```python
+import pytest
+from pathlib import Path
+import tempfile
+import json
+
+@pytest.fixture
+def temp_config_dir():
+    """Create temporary configuration directory for testing."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config_dir = Path(temp_dir)
+        
+        # Create test config.yaml
+        config_content = {
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "model": "claude-3-5-sonnet-20240620",
+            "allowed_tools": [],
+            "system_prompt": "You are a test agent."
+        }
+        
+        config_file = config_dir / "config.yaml"
+        with open(config_file, 'w') as f:
+            import yaml
+            yaml.dump(config_content, f)
+        
+        yield config_dir
+
+@pytest.fixture
+def sample_data():
+    """Provide sample data for testing."""
+    return {
+        "clients": {
+            "Test Client": {
+                "id": "client-001",
+                "name": "Test Client",
+                "email": "test@example.com",
+                "industry": "Technology"
+            }
+        },
+        "projects": {
+            "Test Project": {
+                "id": "project-001",
+                "name": "Test Project",
+                "client_name": "Test Client",
+                "type": "Brand Identity",
+                "budget": 50000
+            }
+        }
+    }
+```
+
+### Test Utilities
+
+```python
+def create_test_agent(agent_class, config_dir, **kwargs):
+    """Utility to create test agent instances."""
+    return agent_class(config_dir, **kwargs)
+
+async def run_tool_test(agent, tool_name, args, expected_keywords=None):
+    """Utility to run tool tests with common assertions."""
+    tool_method = getattr(agent, tool_name)
+    result = await tool_method(args)
+    
+    assert "content" in result
+    assert len(result["content"]) > 0
+    assert result["content"][0]["type"] == "text"
+    
+    if expected_keywords:
+        result_text = result["content"][0]["text"]
+        for keyword in expected_keywords:
+            assert keyword in result_text
+    
+    return result
+```

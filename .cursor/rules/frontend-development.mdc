@@ -1,0 +1,736 @@
+---
+globs: src/**/*.tsx,src/**/*.ts,src/**/*.jsx,src/**/*.js,frontend/**/*.tsx,frontend/**/*.ts,frontend/**/*.jsx,frontend/**/*.js
+description: Frontend development patterns and best practices for React/TypeScript applications
+---
+
+# 🎨 Frontend Development Patterns
+
+## 🏗️ React Component Architecture
+
+### Component Structure Pattern
+
+**Always follow this component structure:**
+
+```typescript
+// Component imports
+import React from 'react';
+import { ComponentProps } from './types';
+import { cn } from '@/utils/helpers';
+
+// Component interface
+interface ComponentNameProps {
+  // Props definition with TypeScript
+  title: string;
+  variant?: 'default' | 'primary' | 'secondary';
+  className?: string;
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
+// Component implementation
+const ComponentName: React.FC<ComponentNameProps> = ({
+  title,
+  variant = 'default',
+  className,
+  children,
+  onClick,
+  ...props
+}) => {
+  // Hooks at the top
+  const [state, setState] = useState(false);
+  
+  // Event handlers
+  const handleClick = () => {
+    onClick?.();
+  };
+  
+  // Render
+  return (
+    <div
+      className={cn('base-classes', variant === 'primary' && 'primary-classes', className)}
+      onClick={handleClick}
+      {...props}
+    >
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+};
+
+// Export with display name
+ComponentName.displayName = 'ComponentName';
+export default ComponentName;
+```
+
+### Component File Organization
+
+```
+src/components/
+├── common/
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   ├── Button.test.tsx
+│   │   ├── Button.stories.tsx
+│   │   ├── types.ts
+│   │   └── index.ts
+│   └── Card/
+│       ├── Card.tsx
+│       ├── Card.test.tsx
+│       └── index.ts
+├── layout/
+│   ├── Header/
+│   └── Sidebar/
+└── features/
+    ├── projects/
+    └── squad/
+```
+
+## 🎯 TypeScript Patterns
+
+### Type Definitions
+
+**Always define proper TypeScript interfaces:**
+
+```typescript
+// types/project.ts
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  clientName: string;
+  status: ProjectStatus;
+  priority: Priority;
+  progress: number;
+  budget: number;
+  deadline: string;
+  teamMembers: TeamMember[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProjectStatus = 'Not Started' | 'In Progress' | 'Review' | 'Completed' | 'On Hold' | 'Cancelled';
+export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar?: string;
+}
+
+// Component props with proper typing
+export interface ProjectCardProps {
+  project: Project;
+  onEdit?: (project: Project) => void;
+  onView?: (project: Project) => void;
+  className?: string;
+}
+```
+
+### Generic Components
+
+**Use generics for reusable components:**
+
+```typescript
+interface ListProps<T> {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  keyExtractor: (item: T) => string;
+  className?: string;
+}
+
+function List<T>({ items, renderItem, keyExtractor, className }: ListProps<T>) {
+  return (
+    <div className={cn('list-container', className)}>
+      {items.map((item, index) => (
+        <div key={keyExtractor(item)}>
+          {renderItem(item, index)}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## 🎨 Styling Patterns
+
+### Tailwind CSS Best Practices
+
+**Use consistent Tailwind patterns:**
+
+```typescript
+// Utility function for conditional classes
+import { cn } from '@/utils/helpers';
+
+// Component with variant-based styling
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'squad' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md', className, ...props }) => {
+  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+  
+  const variantClasses = {
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
+    squad: 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 focus:ring-purple-500',
+    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+  };
+  
+  const sizeClasses = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2 text-sm',
+    lg: 'px-6 py-3 text-base',
+  };
+  
+  return (
+    <button
+      className={cn(
+        baseClasses,
+        variantClasses[variant],
+        sizeClasses[size],
+        className
+      )}
+      {...props}
+    />
+  );
+};
+```
+
+### Design System Colors
+
+**Use consistent color palette:**
+
+```css
+/* tailwind.config.js */
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+        },
+        secondary: {
+          500: '#7c3aed',
+          600: '#6d28d9',
+        },
+        accent: {
+          green: '#10b981',
+          orange: '#f59e0b',
+          red: '#ef4444',
+        },
+      },
+    },
+  },
+};
+```
+
+## 🔄 State Management Patterns
+
+### Redux Toolkit Patterns
+
+**Use RTK Query for API state:**
+
+```typescript
+// store/api/projectsApi.ts
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { Project, CreateProjectRequest } from '@/types/project';
+
+export const projectsApi = createApi({
+  reducerPath: 'projectsApi',
+  baseQuery: fetchBaseQuery({
+    baseUrl: '/api/projects',
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
+  tagTypes: ['Project'],
+  endpoints: (builder) => ({
+    getProjects: builder.query<Project[], void>({
+      query: () => '',
+      providesTags: ['Project'],
+    }),
+    createProject: builder.mutation<Project, CreateProjectRequest>({
+      query: (project) => ({
+        url: '',
+        method: 'POST',
+        body: project,
+      }),
+      invalidatesTags: ['Project'],
+    }),
+  }),
+});
+
+export const { useGetProjectsQuery, useCreateProjectMutation } = projectsApi;
+```
+
+### Local State with Hooks
+
+**Use custom hooks for complex state logic:**
+
+```typescript
+// hooks/useProjectForm.ts
+import { useState, useCallback } from 'react';
+import { useCreateProjectMutation } from '@/store/api/projectsApi';
+import { CreateProjectRequest } from '@/types/project';
+
+export const useProjectForm = () => {
+  const [formData, setFormData] = useState<CreateProjectRequest>({
+    name: '',
+    description: '',
+    clientId: '',
+    budget: 0,
+    deadline: '',
+  });
+  
+  const [createProject, { isLoading, error }] = useCreateProjectMutation();
+  
+  const updateField = useCallback((field: keyof CreateProjectRequest, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+  
+  const submitForm = useCallback(async () => {
+    try {
+      await createProject(formData).unwrap();
+      setFormData({
+        name: '',
+        description: '',
+        clientId: '',
+        budget: 0,
+        deadline: '',
+      });
+    } catch (err) {
+      console.error('Failed to create project:', err);
+    }
+  }, [formData, createProject]);
+  
+  return {
+    formData,
+    updateField,
+    submitForm,
+    isLoading,
+    error,
+  };
+};
+```
+
+## 🔌 API Integration Patterns
+
+### WebSocket Integration
+
+**Use custom hook for WebSocket connections:**
+
+```typescript
+// hooks/useWebSocket.ts
+import { useEffect, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { useAppDispatch } from '@/store';
+import { addProject, updateProject } from '@/store/slices/projectsSlice';
+
+export const useWebSocket = () => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const dispatch = useAppDispatch();
+  
+  useEffect(() => {
+    const newSocket = io(process.env.REACT_APP_WS_URL || 'ws://localhost:8000');
+    
+    newSocket.on('connect', () => setConnected(true));
+    newSocket.on('disconnect', () => setConnected(false));
+    newSocket.on('project:created', (project) => dispatch(addProject(project)));
+    newSocket.on('project:updated', (project) => dispatch(updateProject(project)));
+    
+    setSocket(newSocket);
+    
+    return () => newSocket.close();
+  }, [dispatch]);
+  
+  const emit = useCallback((event: string, data: any) => {
+    if (socket) {
+      socket.emit(event, data);
+    }
+  }, [socket]);
+  
+  return { socket, connected, emit };
+};
+```
+
+### Error Handling
+
+**Implement comprehensive error handling:**
+
+```typescript
+// utils/errorHandler.ts
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export const handleApiError = (error: any): string => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  
+  if (error.response?.data?.message) {
+    return error.response.data.message;
+  }
+  
+  if (error.message) {
+    return error.message;
+  }
+  
+  return 'An unexpected error occurred';
+};
+
+// Component error boundary
+export const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [hasError, setHasError] = useState(false);
+  
+  useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      console.error('Global error:', error);
+      setHasError(true);
+    };
+    
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+  
+  if (hasError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Something went wrong
+          </h2>
+          <button
+            onClick={() => setHasError(false)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
+};
+```
+
+## 🧪 Testing Patterns
+
+### Component Testing
+
+**Write comprehensive component tests:**
+
+```typescript
+// Button.test.tsx
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { Button } from './Button';
+
+describe('Button', () => {
+  it('renders with correct text', () => {
+    render(<Button>Click me</Button>);
+    expect(screen.getByText('Click me')).toBeInTheDocument();
+  });
+  
+  it('handles click events', () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick}>Click me</Button>);
+    
+    fireEvent.click(screen.getByText('Click me'));
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+  
+  it('applies correct variant classes', () => {
+    render(<Button variant="squad">Squad Mode</Button>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveClass('bg-gradient-to-r', 'from-purple-600', 'to-blue-600');
+  });
+  
+  it('shows loading state', () => {
+    render(<Button loading>Loading</Button>);
+    expect(screen.getByRole('button')).toBeDisabled();
+    expect(screen.getByText('Loading')).toBeInTheDocument();
+  });
+});
+```
+
+### Integration Testing
+
+**Test component integration with Redux:**
+
+```typescript
+// ProjectCard.test.tsx
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { store } from '@/store';
+import ProjectCard from './ProjectCard';
+import { Project } from '@/types/project';
+
+const mockProject: Project = {
+  id: '1',
+  name: 'Test Project',
+  description: 'Test Description',
+  clientName: 'Test Client',
+  status: 'In Progress',
+  priority: 'High',
+  progress: 75,
+  budget: 25000,
+  deadline: '2025-02-01',
+  teamMembers: [],
+  createdAt: '2025-01-01',
+  updatedAt: '2025-01-10',
+};
+
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(
+    <Provider store={store}>
+      {component}
+    </Provider>
+  );
+};
+
+describe('ProjectCard', () => {
+  it('renders project information correctly', () => {
+    renderWithProvider(<ProjectCard project={mockProject} />);
+    
+    expect(screen.getByText('Test Project')).toBeInTheDocument();
+    expect(screen.getByText('Test Client')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
+  });
+});
+```
+
+## 🚀 Performance Patterns
+
+### Code Splitting
+
+**Implement lazy loading for routes:**
+
+```typescript
+// App.tsx
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Loading } from '@/components/common/Loading';
+
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Projects = lazy(() => import('@/pages/Projects'));
+const Squad = lazy(() => import('@/pages/Squad'));
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/squad" element={<Squad />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+};
+```
+
+### Memoization
+
+**Use React.memo for expensive components:**
+
+```typescript
+// components/ProjectCard.tsx
+import React, { memo } from 'react';
+import { Project } from '@/types/project';
+
+interface ProjectCardProps {
+  project: Project;
+  onEdit?: (project: Project) => void;
+  onView?: (project: Project) => void;
+}
+
+const ProjectCard = memo<ProjectCardProps>(({ project, onEdit, onView }) => {
+  return (
+    <div className="project-card">
+      <h3>{project.name}</h3>
+      <p>{project.description}</p>
+      <div className="flex space-x-2">
+        <button onClick={() => onView?.(project)}>View</button>
+        <button onClick={() => onEdit?.(project)}>Edit</button>
+      </div>
+    </div>
+  );
+});
+
+ProjectCard.displayName = 'ProjectCard';
+export default ProjectCard;
+```
+
+## 🔒 Security Patterns
+
+### Input Validation
+
+**Always validate user input:**
+
+```typescript
+// utils/validation.ts
+import { z } from 'zod';
+
+export const projectSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
+  budget: z.number().min(0, 'Budget must be positive'),
+  deadline: z.string().min(1, 'Deadline is required'),
+});
+
+export type ProjectFormData = z.infer<typeof projectSchema>;
+
+// Component with validation
+const ProjectForm: React.FC = () => {
+  const { register, handleSubmit, formState: { errors } } = useForm<ProjectFormData>({
+    resolver: zodResolver(projectSchema),
+  });
+  
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input
+        {...register('name')}
+        className={cn('input', errors.name && 'input-error')}
+      />
+      {errors.name && <span className="error-message">{errors.name.message}</span>}
+    </form>
+  );
+};
+```
+
+### XSS Protection
+
+**Sanitize user content:**
+
+```typescript
+// utils/sanitize.ts
+import DOMPurify from 'dompurify';
+
+export const sanitizeHtml = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
+    ALLOWED_ATTR: [],
+  });
+};
+
+// Component with sanitization
+const RichTextDisplay: React.FC<{ content: string }> = ({ content }) => {
+  const sanitizedContent = sanitizeHtml(content);
+  
+  return (
+    <div
+      dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+      className="rich-text-content"
+    />
+  );
+};
+```
+
+## 📱 Responsive Design Patterns
+
+### Mobile-First Approach
+
+**Use mobile-first responsive design:**
+
+```typescript
+// Responsive component
+const ResponsiveGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {children}
+    </div>
+  );
+};
+
+// Responsive navigation
+const Navigation: React.FC = () => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  return (
+    <nav className="bg-white shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          {/* Desktop menu */}
+          <div className="hidden md:flex items-center space-x-8">
+            <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/projects">Projects</NavLink>
+            <NavLink to="/squad">Squad Mode</NavLink>
+          </div>
+          
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-500 hover:text-gray-600"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Mobile menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            <NavLink to="/dashboard" className="block px-3 py-2">Dashboard</NavLink>
+            <NavLink to="/projects" className="block px-3 py-2">Projects</NavLink>
+            <NavLink to="/squad" className="block px-3 py-2">Squad Mode</NavLink>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+```
+
+## 🎯 Best Practices Summary
+
+### Do's ✅
+- Use TypeScript for all components
+- Implement proper error boundaries
+- Write comprehensive tests
+- Use semantic HTML elements
+- Implement accessibility features
+- Follow mobile-first responsive design
+- Use consistent naming conventions
+- Implement proper loading states
+- Validate all user inputs
+- Use React.memo for expensive components
+
+### Don'ts ❌
+- Don't use inline styles
+- Don't mutate props or state directly
+- Don't use array indices as keys
+- Don't forget to handle loading and error states
+- Don't ignore accessibility requirements
+- Don't use any type in TypeScript
+- Don't forget to clean up event listeners
+- Don't use dangerouslySetInnerHTML without sanitization
+- Don't ignore performance optimizations
+- Don't skip error handling

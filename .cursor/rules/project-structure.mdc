@@ -1,0 +1,144 @@
+---
+alwaysApply: true
+description: Claude Agents repository structure and agent hierarchy patterns
+---
+
+# 🏗️ Claude Agents Project Structure
+
+## 📁 Repository Organization
+
+The repository follows a clear modular structure for building Claude agents:
+
+```
+claude-agents/
+├── agents/                    # Individual agent implementations
+│   ├── agent-template/        # Template for new agents
+│   ├── example-agent/         # Basic example with custom tools
+│   ├── azure-fsi-landingzone/ # Azure FSI infrastructure agent
+│   ├── azure-compliance-checker/ # Azure compliance validation agent
+│   └── ad-agency-pm/          # Ad Agency Project Manager with Squad Mode
+├── shared/                    # Shared utilities and base classes
+│   ├── agents.py             # BaseClaudeAgent and InteractiveAgent
+│   └── utils/                # Common utilities (config, logging, validation)
+├── docs/                     # Documentation
+│   ├── project/              # Project documentation and roadmap
+│   └── azure-fsi/            # Azure FSI specific documentation
+├── tests/                    # Test suite
+└── scripts/                  # Setup and utility scripts
+```
+
+## 🤖 Agent Hierarchy
+
+### Base Classes ([shared/agents.py](mdc:shared/agents.py))
+
+**BaseClaudeAgent** - Foundation for all agents:
+- Manages Claude Agent SDK client lifecycle (connect/disconnect)
+- Loads YAML configuration from `config.yaml` with environment variable overrides
+- Implements async context manager protocol (`__aenter__`/`__aexit__`)
+- Provides `get_custom_tools()` hook for MCP tool registration
+- Handles `query()` method for async streaming responses
+
+**InteractiveAgent** - Extends BaseClaudeAgent:
+- Adds `run_interactive()` conversation loop
+- Provides `display_message()` for formatted console output
+- Tracks conversation history
+- Handles KeyboardInterrupt gracefully
+
+### Agent Structure Pattern
+
+Each agent directory contains:
+```
+agents/agent-name/
+├── agent.py              # Main implementation (inherits from BaseClaudeAgent/InteractiveAgent)
+├── config.yaml           # Agent configuration
+├── requirements.txt      # Agent-specific dependencies
+├── README.md            # Agent documentation
+├── logs/                # Auto-created log directory
+└── sub-agents/          # For Squad Mode agents (optional)
+    └── specialist-name/
+        ├── agent.py
+        └── config.yaml
+```
+
+## 🔧 Configuration Management
+
+Configuration hierarchy (lowest to highest priority):
+1. Code defaults in agent class
+2. `config.yaml` in agent directory
+3. Environment variables (`.env` file)
+
+Key config.yaml fields:
+- `name`, `description`, `version` - Agent metadata
+- `model` - Claude model (e.g., "claude-3-5-sonnet-20240620")
+- `allowed_tools` - List of built-in tools agent can use
+- `system_prompt` - Override default system prompt
+- `permission_mode` - "default", "all", or "none"
+- `max_turns` - Conversation turn limit
+
+## 🎭 Squad Mode Architecture
+
+For multi-agent orchestration (like [agents/ad-agency-pm/](mdc:agents/ad-agency-pm/)):
+
+**Squad Mode Features:**
+- **Sub-Agents**: Specialist agents in `sub-agents/` directory
+- **Delegation Tools**: Tools to delegate tasks to specific specialists
+- **Parallel Analysis**: Run multiple agents concurrently
+- **Synthesis**: Combine results from multiple agents
+- **Context Sharing**: Automatic project context propagation
+
+**Key Methods:**
+- `_initialize_squad()` - Lazy-loads sub-agents only when squad_mode=True
+- `_delegate_to_specialist(specialist, task, context)` - Routes task to specific agent
+- `_parallel_analysis(agents, task, context)` - Runs multiple agents concurrently
+- `_synthesize_results(results, context)` - Consolidates findings into action plan
+
+## 🚀 Running Agents
+
+**Standard Mode:**
+```bash
+cd agents/agent-name
+python agent.py
+```
+
+**Squad Mode:**
+```bash
+cd agents/agent-name
+python agent.py --squad
+```
+
+## 📚 Key Development Patterns
+
+### Async Context Manager
+All agents support async context manager for automatic connection management:
+```python
+async with MyAgent(config_dir) as agent:
+    async for message in agent.query("prompt"):
+        # Process messages
+```
+
+### Custom Tools
+Tools are created using the `@tool` decorator from claude-agent-sdk:
+```python
+from claude_agent_sdk import tool
+
+@tool("tool_name", "Description", {"param": str})
+async def my_tool(self, args):
+    return {"content": [{"type": "text", "text": "Result"}]}
+
+def get_custom_tools(self) -> List[Any]:
+    return [self.my_tool]
+```
+
+### Logging
+Structured logging via shared.utils.logging:
+- `get_logger(name)` - Returns configured logger
+- `setup_logging(level)` - Configures file and console handlers
+- Logs go to `logs/{agent_name}_{timestamp}.log`
+
+## 🔍 Important Notes
+
+- **Claude Code CLI v2.0.1+ required** - v1.x is not compatible
+- **Python 3.10+** - Required for type hints and async features
+- **Environment variables** - Always use `.env` for ANTHROPIC_API_KEY
+- **Squad mode** - Only use `--squad` flag for agents that support it
+- **Setting sources** - Disabled in ClaudeAgentOptions to avoid CLI conflicts

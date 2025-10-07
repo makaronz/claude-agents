@@ -1,0 +1,876 @@
+---
+alwaysApply: true
+---
+# 🧪 Frontend Testing Patterns
+
+## 🎯 Testing Strategy
+
+### Testing Pyramid
+
+**Follow the testing pyramid approach:**
+
+```
+    /\
+   /  \     E2E Tests (Few)
+  /____\    - Complete user workflows
+ /      \   - Critical business paths
+/________\  - Cross-browser testing
+
+   /\
+  /  \      Integration Tests (Some)
+ /____\     - Component interactions
+/      \    - API integration
+/________\  - State management
+
+  /\
+ /  \       Unit Tests (Many)
+/____\      - Individual components
+/      \    - Utility functions
+/________\  - Custom hooks
+```
+
+### Testing Tools
+
+**Use the recommended testing stack:**
+
+```json
+{
+  "devDependencies": {
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/user-event": "^14.4.3",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "@types/jest": "^29.5.2",
+    "playwright": "^1.35.0",
+    "msw": "^1.0.0"
+  }
+}
+```
+
+## 🧩 Unit Testing Patterns
+
+### Component Testing
+
+**Test component behavior, not implementation:**
+
+```typescript
+// Button.test.tsx
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Button } from './Button';
+
+describe('Button', () => {
+  it('renders with correct text', () => {
+    render(<Button>Click me</Button>);
+    expect(screen.getByRole('button', { name: /click me/i })).toBeInTheDocument();
+  });
+  
+  it('handles click events', async () => {
+    const user = userEvent.setup();
+    const handleClick = jest.fn();
+    
+    render(<Button onClick={handleClick}>Click me</Button>);
+    
+    await user.click(screen.getByRole('button'));
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+  
+  it('shows loading state correctly', () => {
+    render(<Button loading>Loading</Button>);
+    
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    expect(screen.getByText('Loading')).toBeInTheDocument();
+  });
+  
+  it('applies correct variant classes', () => {
+    render(<Button variant="squad">Squad Mode</Button>);
+    
+    const button = screen.getByRole('button');
+    expect(button).toHaveClass('bg-gradient-to-r', 'from-purple-600', 'to-blue-600');
+  });
+  
+  it('forwards ref correctly', () => {
+    const ref = React.createRef<HTMLButtonElement>();
+    render(<Button ref={ref}>Button</Button>);
+    
+    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+  });
+});
+```
+
+### Custom Hook Testing
+
+**Test hooks with renderHook utility:**
+
+```typescript
+// useForm.test.ts
+import { renderHook, act } from '@testing-library/react';
+import { useForm } from './useForm';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+});
+
+describe('useForm', () => {
+  it('initializes with correct values', () => {
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues: { name: 'John', email: 'john@example.com' },
+        validationSchema: schema,
+        onSubmit: jest.fn(),
+      })
+    );
+    
+    expect(result.current.values).toEqual({ name: 'John', email: 'john@example.com' });
+    expect(result.current.errors).toEqual({});
+    expect(result.current.isSubmitting).toBe(false);
+  });
+  
+  it('updates values correctly', () => {
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues: { name: '', email: '' },
+        validationSchema: schema,
+        onSubmit: jest.fn(),
+      })
+    );
+    
+    act(() => {
+      result.current.setValue('name', 'Jane');
+    });
+    
+    expect(result.current.values.name).toBe('Jane');
+  });
+  
+  it('validates form data correctly', () => {
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues: { name: '', email: 'invalid-email' },
+        validationSchema: schema,
+        onSubmit: jest.fn(),
+      })
+    );
+    
+    act(() => {
+      result.current.handleSubmit({ preventDefault: jest.fn() } as any);
+    });
+    
+    expect(result.current.errors.name).toBe('Name is required');
+    expect(result.current.errors.email).toBe('Invalid email');
+  });
+  
+  it('calls onSubmit when validation passes', async () => {
+    const onSubmit = jest.fn();
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues: { name: 'John', email: 'john@example.com' },
+        validationSchema: schema,
+        onSubmit,
+      })
+    );
+    
+    await act(async () => {
+      result.current.handleSubmit({ preventDefault: jest.fn() } as any);
+    });
+    
+    expect(onSubmit).toHaveBeenCalledWith({ name: 'John', email: 'john@example.com' });
+  });
+});
+```
+
+### Utility Function Testing
+
+**Test pure functions with simple assertions:**
+
+```typescript
+// utils/helpers.test.ts
+import { cn, formatCurrency, formatDate, debounce } from './helpers';
+
+describe('helpers', () => {
+  describe('cn', () => {
+    it('combines class names correctly', () => {
+      expect(cn('base', 'additional')).toBe('base additional');
+    });
+    
+    it('handles conditional classes', () => {
+      expect(cn('base', true && 'conditional')).toBe('base conditional');
+      expect(cn('base', false && 'conditional')).toBe('base');
+    });
+    
+    it('filters out falsy values', () => {
+      expect(cn('base', null, undefined, 'valid')).toBe('base valid');
+    });
+  });
+  
+  describe('formatCurrency', () => {
+    it('formats currency correctly', () => {
+      expect(formatCurrency(1234.56)).toBe('$1,234.56');
+      expect(formatCurrency(0)).toBe('$0.00');
+      expect(formatCurrency(1000000)).toBe('$1,000,000.00');
+    });
+  });
+  
+  describe('formatDate', () => {
+    it('formats dates correctly', () => {
+      const date = new Date('2025-01-15');
+      expect(formatDate(date)).toBe('Jan 15, 2025');
+    });
+  });
+  
+  describe('debounce', () => {
+    jest.useFakeTimers();
+    
+    it('debounces function calls', () => {
+      const func = jest.fn();
+      const debouncedFunc = debounce(func, 100);
+      
+      debouncedFunc();
+      debouncedFunc();
+      debouncedFunc();
+      
+      expect(func).not.toHaveBeenCalled();
+      
+      jest.advanceTimersByTime(100);
+      
+      expect(func).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+```
+
+## 🔗 Integration Testing Patterns
+
+### Component with Redux
+
+**Test components with Redux store:**
+
+```typescript
+// ProjectList.test.tsx
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import { ProjectList } from './ProjectList';
+import { projectsSlice } from '@/store/slices/projectsSlice';
+
+const createMockStore = (initialState = {}) => {
+  return configureStore({
+    reducer: {
+      projects: projectsSlice.reducer,
+    },
+    preloadedState: {
+      projects: {
+        projects: [],
+        loading: false,
+        error: null,
+        ...initialState,
+      },
+    },
+  });
+};
+
+describe('ProjectList', () => {
+  it('renders projects from Redux store', () => {
+    const mockProjects = [
+      {
+        id: '1',
+        name: 'Test Project',
+        description: 'Test Description',
+        clientName: 'Test Client',
+        status: 'In Progress',
+        priority: 'High',
+        progress: 75,
+        budget: 25000,
+        deadline: '2025-02-01',
+        teamMembers: [],
+        createdAt: '2025-01-01',
+        updatedAt: '2025-01-10',
+      },
+    ];
+    
+    const store = createMockStore({ projects: mockProjects });
+    
+    render(
+      <Provider store={store}>
+        <ProjectList />
+      </Provider>
+    );
+    
+    expect(screen.getByText('Test Project')).toBeInTheDocument();
+    expect(screen.getByText('Test Client')).toBeInTheDocument();
+  });
+  
+  it('shows loading state', () => {
+    const store = createMockStore({ loading: true });
+    
+    render(
+      <Provider store={store}>
+        <ProjectList />
+      </Provider>
+    );
+    
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+  
+  it('shows error state', () => {
+    const store = createMockStore({ error: 'Failed to load projects' });
+    
+    render(
+      <Provider store={store}>
+        <ProjectList />
+      </Provider>
+    );
+    
+    expect(screen.getByText('Failed to load projects')).toBeInTheDocument();
+  });
+});
+```
+
+### API Integration Testing
+
+**Test API integration with MSW:**
+
+```typescript
+// ProjectList.integration.test.tsx
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+import { ProjectList } from './ProjectList';
+
+const server = setupServer(
+  rest.get('/api/projects', (req, res, ctx) => {
+    return res(
+      ctx.json([
+        {
+          id: '1',
+          name: 'Test Project',
+          description: 'Test Description',
+          clientName: 'Test Client',
+          status: 'In Progress',
+          priority: 'High',
+          progress: 75,
+          budget: 25000,
+          deadline: '2025-02-01',
+          teamMembers: [],
+          createdAt: '2025-01-01',
+          updatedAt: '2025-01-10',
+        },
+      ])
+    );
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('ProjectList Integration', () => {
+  it('fetches and displays projects from API', async () => {
+    render(<ProjectList />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Test Project')).toBeInTheDocument();
+    });
+    
+    expect(screen.getByText('Test Client')).toBeInTheDocument();
+  });
+  
+  it('handles API errors gracefully', async () => {
+    server.use(
+      rest.get('/api/projects', (req, res, ctx) => {
+        return res(ctx.status(500), ctx.json({ message: 'Internal Server Error' }));
+      })
+    );
+    
+    render(<ProjectList />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load projects')).toBeInTheDocument();
+    });
+  });
+});
+```
+
+### WebSocket Integration Testing
+
+**Test WebSocket connections:**
+
+```typescript
+// useWebSocket.test.ts
+import { renderHook, act } from '@testing-library/react';
+import { useWebSocket } from './useWebSocket';
+import { io } from 'socket.io-client';
+
+// Mock socket.io-client
+jest.mock('socket.io-client');
+const mockIo = io as jest.MockedFunction<typeof io>;
+
+describe('useWebSocket', () => {
+  let mockSocket: any;
+  
+  beforeEach(() => {
+    mockSocket = {
+      on: jest.fn(),
+      off: jest.fn(),
+      emit: jest.fn(),
+      close: jest.fn(),
+    };
+    
+    mockIo.mockReturnValue(mockSocket);
+  });
+  
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+  
+  it('connects to WebSocket on mount', () => {
+    renderHook(() => useWebSocket());
+    
+    expect(mockIo).toHaveBeenCalledWith(process.env.REACT_APP_WS_URL);
+    expect(mockSocket.on).toHaveBeenCalledWith('connect', expect.any(Function));
+    expect(mockSocket.on).toHaveBeenCalledWith('disconnect', expect.any(Function));
+  });
+  
+  it('emits events correctly', () => {
+    const { result } = renderHook(() => useWebSocket());
+    
+    act(() => {
+      result.current.emit('test-event', { data: 'test' });
+    });
+    
+    expect(mockSocket.emit).toHaveBeenCalledWith('test-event', { data: 'test' });
+  });
+  
+  it('closes connection on unmount', () => {
+    const { unmount } = renderHook(() => useWebSocket());
+    
+    unmount();
+    
+    expect(mockSocket.close).toHaveBeenCalled();
+  });
+});
+```
+
+## 🎭 E2E Testing Patterns
+
+### Playwright Setup
+
+**Configure Playwright for E2E testing:**
+
+```typescript
+// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+  ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+  },
+});
+```
+
+### E2E Test Examples
+
+**Write comprehensive E2E tests:**
+
+```typescript
+// e2e/project-management.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Project Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    // Login or setup test data
+  });
+  
+  test('should create a new project', async ({ page }) => {
+    // Navigate to projects page
+    await page.click('[data-testid="nav-projects"]');
+    
+    // Click create project button
+    await page.click('[data-testid="create-project-btn"]');
+    
+    // Fill project form
+    await page.fill('[data-testid="project-name"]', 'E2E Test Project');
+    await page.fill('[data-testid="project-description"]', 'E2E Test Description');
+    await page.selectOption('[data-testid="client-select"]', 'test-client-1');
+    await page.fill('[data-testid="project-budget"]', '25000');
+    await page.fill('[data-testid="project-deadline"]', '2025-02-01');
+    
+    // Submit form
+    await page.click('[data-testid="submit-project"]');
+    
+    // Verify project was created
+    await expect(page.locator('[data-testid="project-list"]')).toContainText('E2E Test Project');
+  });
+  
+  test('should edit an existing project', async ({ page }) => {
+    // Navigate to projects page
+    await page.click('[data-testid="nav-projects"]');
+    
+    // Click edit button on first project
+    await page.click('[data-testid="project-card"]:first-child [data-testid="edit-btn"]');
+    
+    // Update project name
+    await page.fill('[data-testid="project-name"]', 'Updated Project Name');
+    
+    // Save changes
+    await page.click('[data-testid="save-project"]');
+    
+    // Verify changes were saved
+    await expect(page.locator('[data-testid="project-list"]')).toContainText('Updated Project Name');
+  });
+  
+  test('should delete a project', async ({ page }) => {
+    // Navigate to projects page
+    await page.click('[data-testid="nav-projects"]');
+    
+    // Click delete button on first project
+    await page.click('[data-testid="project-card"]:first-child [data-testid="delete-btn"]');
+    
+    // Confirm deletion
+    await page.click('[data-testid="confirm-delete"]');
+    
+    // Verify project was deleted
+    await expect(page.locator('[data-testid="project-list"]')).not.toContainText('Test Project');
+  });
+});
+```
+
+### Squad Mode E2E Testing
+
+**Test Squad Mode functionality:**
+
+```typescript
+// e2e/squad-mode.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Squad Mode', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/squad');
+  });
+  
+  test('should run squad analysis', async ({ page }) => {
+    // Enter creative brief
+    await page.fill('[data-testid="brief-input"]', 'Create a campaign for eco-friendly sneakers targeting Gen Z');
+    
+    // Start squad analysis
+    await page.click('[data-testid="start-squad-analysis"]');
+    
+    // Wait for analysis to complete
+    await expect(page.locator('[data-testid="squad-analysis-progress"]')).toBeVisible();
+    
+    // Wait for all specialists to complete
+    await expect(page.locator('[data-testid="specialist-card"]')).toHaveCount(6);
+    
+    // Verify synthesis is generated
+    await expect(page.locator('[data-testid="squad-synthesis"]')).toBeVisible();
+  });
+  
+  test('should show specialist progress', async ({ page }) => {
+    // Start analysis
+    await page.fill('[data-testid="brief-input"]', 'Test brief');
+    await page.click('[data-testid="start-squad-analysis"]');
+    
+    // Check that progress bars are visible
+    await expect(page.locator('[data-testid="progress-bar"]')).toHaveCount(6);
+    
+    // Wait for completion
+    await expect(page.locator('[data-testid="analysis-complete"]')).toBeVisible();
+  });
+});
+```
+
+## 🎯 Accessibility Testing
+
+### Screen Reader Testing
+
+**Test accessibility with screen readers:**
+
+```typescript
+// accessibility.test.tsx
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
+import { ProjectCard } from './ProjectCard';
+
+expect.extend(toHaveNoViolations);
+
+describe('ProjectCard Accessibility', () => {
+  it('should not have accessibility violations', async () => {
+    const { container } = render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={jest.fn()}
+        onView={jest.fn()}
+      />
+    );
+    
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+  
+  it('should have proper ARIA labels', () => {
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={jest.fn()}
+        onView={jest.fn()}
+      />
+    );
+    
+    expect(screen.getByRole('button', { name: /view project/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit project/i })).toBeInTheDocument();
+  });
+  
+  it('should be keyboard navigable', async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={jest.fn()}
+        onView={jest.fn()}
+      />
+    );
+    
+    const viewButton = screen.getByRole('button', { name: /view project/i });
+    const editButton = screen.getByRole('button', { name: /edit project/i });
+    
+    await user.tab();
+    expect(viewButton).toHaveFocus();
+    
+    await user.tab();
+    expect(editButton).toHaveFocus();
+  });
+});
+```
+
+## 🚀 Performance Testing
+
+### Component Performance
+
+**Test component performance:**
+
+```typescript
+// performance.test.tsx
+import React from 'react';
+import { render } from '@testing-library/react';
+import { ProjectList } from './ProjectList';
+
+describe('ProjectList Performance', () => {
+  it('should render large lists efficiently', () => {
+    const largeProjectList = Array.from({ length: 1000 }, (_, i) => ({
+      id: `project-${i}`,
+      name: `Project ${i}`,
+      description: `Description ${i}`,
+      clientName: `Client ${i}`,
+      status: 'In Progress' as const,
+      priority: 'Medium' as const,
+      progress: 50,
+      budget: 10000,
+      deadline: '2025-02-01',
+      teamMembers: [],
+      createdAt: '2025-01-01',
+      updatedAt: '2025-01-10',
+    }));
+    
+    const startTime = performance.now();
+    render(<ProjectList projects={largeProjectList} />);
+    const endTime = performance.now();
+    
+    // Should render within 100ms
+    expect(endTime - startTime).toBeLessThan(100);
+  });
+});
+```
+
+## 🎯 Testing Best Practices
+
+### Test Organization
+
+**Organize tests logically:**
+
+```typescript
+// Component.test.tsx structure
+describe('ComponentName', () => {
+  // Setup and teardown
+  beforeEach(() => {
+    // Setup code
+  });
+  
+  afterEach(() => {
+    // Cleanup code
+  });
+  
+  // Rendering tests
+  describe('Rendering', () => {
+    it('renders with required props', () => {});
+    it('renders with optional props', () => {});
+    it('renders with different variants', () => {});
+  });
+  
+  // Interaction tests
+  describe('Interactions', () => {
+    it('handles click events', () => {});
+    it('handles keyboard events', () => {});
+    it('handles form submission', () => {});
+  });
+  
+  // State tests
+  describe('State Management', () => {
+    it('updates state correctly', () => {});
+    it('handles loading states', () => {});
+    it('handles error states', () => {});
+  });
+  
+  // Accessibility tests
+  describe('Accessibility', () => {
+    it('has proper ARIA attributes', () => {});
+    it('is keyboard navigable', () => {});
+    it('has no accessibility violations', () => {});
+  });
+});
+```
+
+### Mock Patterns
+
+**Use consistent mocking patterns:**
+
+```typescript
+// Mock external dependencies
+jest.mock('socket.io-client', () => ({
+  io: jest.fn(() => ({
+    on: jest.fn(),
+    off: jest.fn(),
+    emit: jest.fn(),
+    close: jest.fn(),
+  })),
+}));
+
+// Mock API responses
+const mockApiResponse = {
+  data: [
+    {
+      id: '1',
+      name: 'Test Project',
+      // ... other properties
+    },
+  ],
+};
+
+// Mock Redux store
+const createMockStore = (initialState = {}) => {
+  return configureStore({
+    reducer: {
+      projects: projectsSlice.reducer,
+    },
+    preloadedState: {
+      projects: {
+        projects: [],
+        loading: false,
+        error: null,
+        ...initialState,
+      },
+    },
+  });
+};
+```
+
+### Test Data Factories
+
+**Use factories for test data:**
+
+```typescript
+// test-utils/factories.ts
+export const createMockProject = (overrides: Partial<Project> = {}): Project => ({
+  id: '1',
+  name: 'Test Project',
+  description: 'Test Description',
+  clientName: 'Test Client',
+  status: 'In Progress',
+  priority: 'High',
+  progress: 75,
+  budget: 25000,
+  deadline: '2025-02-01',
+  teamMembers: [],
+  createdAt: '2025-01-01',
+  updatedAt: '2025-01-10',
+  ...overrides,
+});
+
+export const createMockProjects = (count: number): Project[] => {
+  return Array.from({ length: count }, (_, i) =>
+    createMockProject({
+      id: `project-${i}`,
+      name: `Project ${i}`,
+    })
+  );
+};
+```
+
+## 🎯 Testing Checklist
+
+### Unit Tests ✅
+- [ ] Test component rendering with different props
+- [ ] Test user interactions (clicks, form submissions)
+- [ ] Test state changes and side effects
+- [ ] Test error handling and edge cases
+- [ ] Test accessibility features
+- [ ] Test custom hooks thoroughly
+- [ ] Test utility functions with various inputs
+
+### Integration Tests ✅
+- [ ] Test component interactions with Redux
+- [ ] Test API integration with MSW
+- [ ] Test WebSocket connections
+- [ ] Test form validation and submission
+- [ ] Test navigation and routing
+- [ ] Test error boundaries
+
+### E2E Tests ✅
+- [ ] Test complete user workflows
+- [ ] Test critical business paths
+- [ ] Test cross-browser compatibility
+- [ ] Test responsive design
+- [ ] Test performance under load
+- [ ] Test accessibility with real users
+
+### Test Quality ✅
+- [ ] Tests are readable and maintainable
+- [ ] Tests are fast and reliable
+- [ ] Tests cover edge cases
+- [ ] Tests use proper assertions
+- [ ] Tests are properly isolated
+- [ ] Tests follow naming conventions
+- [ ] Tests have good coverage

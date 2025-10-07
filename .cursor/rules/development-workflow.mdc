@@ -1,0 +1,436 @@
+---
+alwaysApply: true
+description: Complete development workflow for Claude agents with best practices and quality gates
+---
+
+# 🚀 Claude Agents Development Workflow
+
+## 🎯 Development Process Overview
+
+This workflow ensures consistent, high-quality development of Claude agents with proper testing, documentation, and deployment practices.
+
+## 📋 Pre-Development Checklist
+
+### 1. Environment Setup
+```bash
+# Always start with proper environment setup
+./scripts/setup.sh
+source .venv/bin/activate
+uv run python scripts/test_setup.py
+```
+
+### 2. Agent Planning
+- [ ] Define agent purpose and scope
+- [ ] Identify required custom tools
+- [ ] Plan data storage requirements
+- [ ] Consider Squad Mode if multi-agent collaboration needed
+- [ ] Design configuration structure
+
+### 3. Repository Structure
+- [ ] Create agent directory: `agents/agent-name/`
+- [ ] Set up standard files: `agent.py`, `config.yaml`, `README.md`, `requirements.txt`
+- [ ] Create `logs/` directory (auto-created)
+- [ ] Add `sub-agents/` if Squad Mode required
+
+## 🏗️ Development Phases
+
+### Phase 1: Core Agent Implementation
+
+**1.1 Base Agent Class**
+```python
+from shared.agents import InteractiveAgent
+from pathlib import Path
+from typing import Dict, Any, List, Optional
+
+class MyAgent(InteractiveAgent):
+    def __init__(self, config_dir: Optional[Path] = None, squad_mode: bool = False):
+        super().__init__(config_dir)
+        self.squad_mode = squad_mode
+        self.logger.info("MyAgent initialized")
+```
+
+**1.2 Configuration Setup**
+```yaml
+# config.yaml
+name: My Agent
+description: Agent description
+version: 0.1.0
+model: claude-3-5-sonnet-20240620
+allowed_tools:
+  - mcp__my_agent_tools__my_tool
+system_prompt: |
+  You are my AI agent...
+permission_mode: default
+max_turns: 20
+```
+
+**1.3 Custom Tools Implementation**
+- Implement core CRUD operations
+- Add data validation and error handling
+- Include logging for all operations
+- Test each tool individually
+
+### Phase 2: Squad Mode (If Required)
+
+**2.1 Sub-Agent Creation**
+- Create specialist agents in `sub-agents/` directory
+- Each sub-agent has own `agent.py` and `config.yaml`
+- Implement specialist-specific tools
+
+**2.2 Delegation System**
+- Add delegation tools to main agent
+- Implement parallel analysis capabilities
+- Create synthesis methods
+- Add context sharing mechanisms
+
+**2.3 Squad Mode Testing**
+- Test sub-agent initialization
+- Verify delegation functionality
+- Test parallel analysis performance
+- Validate synthesis quality
+
+### Phase 3: Testing and Validation
+
+**3.1 Unit Testing**
+```python
+@pytest.mark.asyncio
+async def test_agent_functionality():
+    # Test individual tools
+    # Test error handling
+    # Test data validation
+    pass
+```
+
+**3.2 Integration Testing**
+```python
+@pytest.mark.asyncio
+async def test_end_to_end_workflow():
+    # Test complete user workflows
+    # Test data persistence
+    # Test squad mode integration
+    pass
+```
+
+**3.3 Performance Testing**
+- Tool execution time limits
+- Squad mode parallel performance
+- Memory usage validation
+- Error recovery testing
+
+### Phase 4: Documentation
+
+**4.1 README.md**
+- Agent overview and purpose
+- Installation and setup instructions
+- Usage examples (Solo and Squad modes)
+- Tool documentation
+- Configuration options
+
+**4.2 Code Documentation**
+- Docstrings for all methods
+- Inline comments for complex logic
+- Type hints for all parameters
+- Error handling documentation
+
+**4.3 Roadmap Updates**
+- Update [docs/project/roadmap.md](mdc:docs/project/roadmap.md)
+- Add completion status
+- Update metrics and statistics
+- Document new features
+
+## 🔧 Development Best Practices
+
+### Code Quality Standards
+
+**1. Error Handling**
+```python
+@tool("my_tool", "Tool description", {"param": "str"})
+async def my_tool(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        # Tool logic
+        result = self._process_logic(args)
+        self.logger.info("Tool executed successfully")
+        return {"content": [{"type": "text", "text": result}]}
+    except Exception as e:
+        error_msg = f"Tool error: {str(e)}"
+        self.logger.error(error_msg)
+        return {"content": [{"type": "text", "text": error_msg}]}
+```
+
+**2. Input Validation**
+```python
+def _validate_input(self, data: Dict[str, Any], schema: Dict[str, str]) -> tuple[bool, str]:
+    """Validate input data against schema."""
+    for field, expected_type in schema.items():
+        if field not in data:
+            return False, f"Missing required field: {field}"
+        
+        if not isinstance(data[field], eval(expected_type)):
+            return False, f"Field {field} must be {expected_type}"
+    
+    return True, ""
+```
+
+**3. Data Security**
+```python
+def _sanitize_input(self, input_data: str) -> str:
+    """Sanitize user input to prevent injection attacks."""
+    dangerous_chars = ['<', '>', '"', "'", '&', ';', '|', '`', '$']
+    sanitized = input_data
+    
+    for char in dangerous_chars:
+        sanitized = sanitized.replace(char, '')
+    
+    return sanitized.strip()[:10000]  # Limit length
+```
+
+### Testing Standards
+
+**1. Test Coverage**
+- All custom tools must have unit tests
+- Error conditions must be tested
+- Integration tests for complete workflows
+- Performance tests for time-critical operations
+
+**2. Test Structure**
+```python
+class TestMyAgent:
+    @pytest.fixture
+    def agent(self):
+        return MyAgent(Path("test-config"))
+    
+    @pytest.mark.asyncio
+    async def test_tool_success(self, agent):
+        # Test successful execution
+        pass
+    
+    @pytest.mark.asyncio
+    async def test_tool_error(self, agent):
+        # Test error handling
+        pass
+```
+
+### Documentation Standards
+
+**1. README Structure**
+```markdown
+# Agent Name
+
+## Overview
+- Purpose and capabilities
+- Solo vs Squad mode differences
+
+## Features
+- Core capabilities
+- Custom tools
+- Squad mode features
+
+## Installation & Setup
+- Prerequisites
+- Quick start
+- Configuration
+
+## Usage Examples
+- Basic usage
+- Advanced features
+- Squad mode examples
+
+## Data Management
+- Storage structure
+- Backup and recovery
+- Data formats
+```
+
+**2. Code Documentation**
+```python
+async def my_method(self, param1: str, param2: int) -> Dict[str, Any]:
+    """
+    Method description.
+    
+    Args:
+        param1: Description of parameter 1
+        param2: Description of parameter 2
+    
+    Returns:
+        Dictionary containing result data
+    
+    Raises:
+        ValueError: If parameters are invalid
+        RuntimeError: If operation fails
+    """
+    pass
+```
+
+## 🚀 Deployment Checklist
+
+### Pre-Deployment Validation
+
+**1. Code Quality**
+- [ ] All tests pass (`uv run pytest tests/`)
+- [ ] No linting errors
+- [ ] Type hints complete
+- [ ] Error handling comprehensive
+
+**2. Documentation**
+- [ ] README.md complete and accurate
+- [ ] Code documentation complete
+- [ ] Roadmap updated
+- [ ] Changelog updated
+
+**3. Configuration**
+- [ ] config.yaml properly structured
+- [ ] Environment variables documented
+- [ ] Dependencies listed in requirements.txt
+- [ ] Logging configuration tested
+
+**4. Security**
+- [ ] Input validation implemented
+- [ ] File path security validated
+- [ ] No hardcoded secrets
+- [ ] Error messages don't leak sensitive data
+
+### Deployment Steps
+
+**1. Version Management**
+```bash
+# Update version in config.yaml
+version: 0.2.0
+
+# Update roadmap completion status
+# Add changelog entry
+```
+
+**2. Testing**
+```bash
+# Run full test suite
+uv run pytest tests/ -v
+
+# Test agent initialization
+cd agents/my-agent && python agent.py --help
+
+# Test squad mode (if applicable)
+cd agents/my-agent && python agent.py --squad --help
+```
+
+**3. Documentation Update**
+```bash
+# Update roadmap
+# Update README if needed
+# Update changelog
+```
+
+## 🔄 Maintenance Workflow
+
+### Regular Maintenance Tasks
+
+**1. Dependency Updates**
+```bash
+# Check for updates
+uv pip list --outdated
+
+# Update dependencies
+uv pip install --upgrade package-name
+
+# Update requirements.txt
+uv pip freeze > requirements.txt
+```
+
+**2. Performance Monitoring**
+- Monitor tool execution times
+- Check memory usage patterns
+- Validate error rates
+- Review log files for issues
+
+**3. User Feedback Integration**
+- Collect user feedback
+- Identify common issues
+- Plan improvements
+- Implement fixes
+
+### Quality Gates
+
+**1. Code Review Checklist**
+- [ ] Follows established patterns
+- [ ] Includes proper error handling
+- [ ] Has comprehensive tests
+- [ ] Documentation is complete
+- [ ] Security considerations addressed
+
+**2. Performance Benchmarks**
+- Tool execution < 5 seconds
+- Squad mode parallel analysis < 30 seconds
+- Memory usage < 100MB per agent
+- Error rate < 1%
+
+**3. User Experience Standards**
+- Clear error messages
+- Intuitive tool interfaces
+- Comprehensive help documentation
+- Responsive feedback
+
+## 🎯 Success Metrics
+
+### Development Metrics
+- **Test Coverage**: >90% for core functionality
+- **Documentation Coverage**: 100% of public methods
+- **Error Handling**: All tools have comprehensive error handling
+- **Performance**: All tools meet performance benchmarks
+
+### User Experience Metrics
+- **Setup Time**: <5 minutes for new users
+- **Learning Curve**: <30 minutes to first successful use
+- **Error Recovery**: Clear guidance for all error conditions
+- **Feature Discovery**: Intuitive tool discovery and usage
+
+### Quality Metrics
+- **Bug Rate**: <1% of tool executions result in errors
+- **Performance**: 95% of operations complete within benchmarks
+- **Reliability**: 99.9% uptime for agent operations
+- **Security**: Zero security vulnerabilities in production
+
+## 🔧 Troubleshooting Guide
+
+### Common Issues
+
+**1. Import Errors**
+```bash
+# Ensure running from repository root
+cd /path/to/claude-agents
+
+# Check Python path
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+
+# Verify virtual environment
+source .venv/bin/activate
+```
+
+**2. Configuration Issues**
+```bash
+# Check config.yaml syntax
+python -c "import yaml; yaml.safe_load(open('config.yaml'))"
+
+# Verify environment variables
+echo $ANTHROPIC_API_KEY
+```
+
+**3. Squad Mode Issues**
+```bash
+# Check sub-agent structure
+ls -la agents/my-agent/sub-agents/
+
+# Verify sub-agent configs
+find agents/my-agent/sub-agents/ -name "config.yaml" -exec python -c "import yaml; yaml.safe_load(open('{}'))" \;
+```
+
+### Debug Mode
+
+```python
+# Enable debug logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Run agent with debug output
+python agent.py --debug
+```
+
+This comprehensive workflow ensures consistent, high-quality development of Claude agents with proper testing, documentation, and deployment practices.

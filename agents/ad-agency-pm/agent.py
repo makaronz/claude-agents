@@ -24,10 +24,14 @@ class AdAgencyProjectManager(InteractiveAgent):
     
     Manages clients, projects, tasks, deadlines, and team coordination
     for creative advertising agencies.
+    
+    Supports both solo mode (traditional project management) and squad mode
+    (multi-agent creative collaboration with 6 specialist agents).
     """
     
-    def __init__(self, config_dir: Optional[Path] = None):
+    def __init__(self, config_dir: Optional[Path] = None, squad_mode: bool = False):
         super().__init__(config_dir)
+        self.squad_mode = squad_mode
         self.data_dir = self.config_dir / "data"
         self.data_dir.mkdir(exist_ok=True)
         
@@ -43,7 +47,12 @@ class AdAgencyProjectManager(InteractiveAgent):
         self.tasks = self._load_data(self.tasks_file, {})
         self.team = self._load_data(self.team_file, {})
         
-        self.logger.info("Ad Agency Project Manager initialized")
+        # Squad mode initialization
+        self.squad_agents = {}
+        if self.squad_mode:
+            self._initialize_squad()
+        
+        self.logger.info(f"Ad Agency Project Manager initialized {'with squad mode' if squad_mode else 'in solo mode'}")
     
     def _load_data(self, file_path: Path, default: Any) -> Any:
         """Load data from JSON file with fallback to default."""
@@ -65,7 +74,7 @@ class AdAgencyProjectManager(InteractiveAgent):
     
     def get_custom_tools(self) -> List[Any]:
         """Return list of custom tools for project management."""
-        return [
+        tools = [
             self.create_client,
             self.create_project,
             self.add_task,
@@ -82,6 +91,20 @@ class AdAgencyProjectManager(InteractiveAgent):
             self.get_team_workload,
             self.get_upcoming_deadlines
         ]
+        
+        # Add squad mode delegation tools if enabled
+        if self.squad_mode:
+            tools.extend([
+                self.delegate_to_account_manager,
+                self.delegate_to_creative_director,
+                self.delegate_to_art_director,
+                self.delegate_to_copywriter,
+                self.delegate_to_strategy_planner,
+                self.delegate_to_production_manager,
+                self.run_creative_squad_review
+            ])
+        
+        return tools
     
     # Client Management Tools
     
@@ -945,23 +968,311 @@ class AdAgencyProjectManager(InteractiveAgent):
             }]
         }
 
+    # Squad Mode Methods
+    
+    def _initialize_squad(self):
+        """Initialize squad mode with 6 specialist agents."""
+        try:
+            # Import sub-agents
+            import sys
+            sys.path.append(str(self.config_dir / "sub-agents"))
+            
+            # Import sub-agents with proper module names
+            import importlib.util
+            
+            # Account Manager
+            spec = importlib.util.spec_from_file_location("account_manager", self.config_dir / "sub-agents" / "account-manager" / "agent.py")
+            account_manager_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(account_manager_module)
+            AccountManagerAgent = account_manager_module.AccountManagerAgent
+            
+            # Creative Director
+            spec = importlib.util.spec_from_file_location("creative_director", self.config_dir / "sub-agents" / "creative-director" / "agent.py")
+            creative_director_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(creative_director_module)
+            CreativeDirectorAgent = creative_director_module.CreativeDirectorAgent
+            
+            # Art Director
+            spec = importlib.util.spec_from_file_location("art_director", self.config_dir / "sub-agents" / "art-director" / "agent.py")
+            art_director_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(art_director_module)
+            ArtDirectorAgent = art_director_module.ArtDirectorAgent
+            
+            # Copywriter
+            spec = importlib.util.spec_from_file_location("copywriter", self.config_dir / "sub-agents" / "copywriter" / "agent.py")
+            copywriter_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(copywriter_module)
+            CopywriterAgent = copywriter_module.CopywriterAgent
+            
+            # Strategy Planner
+            spec = importlib.util.spec_from_file_location("strategy_planner", self.config_dir / "sub-agents" / "strategy-planner" / "agent.py")
+            strategy_planner_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(strategy_planner_module)
+            StrategyPlannerAgent = strategy_planner_module.StrategyPlannerAgent
+            
+            # Production Manager
+            spec = importlib.util.spec_from_file_location("production_manager", self.config_dir / "sub-agents" / "production-manager" / "agent.py")
+            production_manager_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(production_manager_module)
+            ProductionManagerAgent = production_manager_module.ProductionManagerAgent
+            
+            # Initialize agents
+            self.squad_agents = {
+                "account_manager": AccountManagerAgent(self.config_dir / "sub-agents" / "account-manager"),
+                "creative_director": CreativeDirectorAgent(self.config_dir / "sub-agents" / "creative-director"),
+                "art_director": ArtDirectorAgent(self.config_dir / "sub-agents" / "art-director"),
+                "copywriter": CopywriterAgent(self.config_dir / "sub-agents" / "copywriter"),
+                "strategy_planner": StrategyPlannerAgent(self.config_dir / "sub-agents" / "strategy-planner"),
+                "production_manager": ProductionManagerAgent(self.config_dir / "sub-agents" / "production-manager")
+            }
+            
+            self.logger.info("Squad agents initialized successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize squad agents: {e}")
+            self.squad_agents = {}
+    
+    async def _delegate_to_specialist(self, specialist: str, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to specific specialist agent."""
+        if specialist not in self.squad_agents:
+            return {"content": [{"type": "text", "text": f"Specialist {specialist} not available"}]}
+        
+        try:
+            agent = self.squad_agents[specialist]
+            # Add context to task
+            full_task = f"Task: {task}\n\nContext: {json.dumps(context, indent=2)}"
+            
+            # Execute task with agent
+            result = ""
+            async with agent:
+                async for message in agent.query(full_task):
+                    if hasattr(message, 'content') and message.content:
+                        for content_block in message.content:
+                            if hasattr(content_block, 'text'):
+                                result += content_block.text
+            
+            return {"content": [{"type": "text", "text": result}]}
+            
+        except Exception as e:
+            self.logger.error(f"Delegation to {specialist} failed: {e}")
+            return {"content": [{"type": "text", "text": f"Delegation to {specialist} failed: {str(e)}"}]}
+    
+    async def _parallel_analysis(self, agents: List[str], task: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Run parallel analysis with multiple agents."""
+        import asyncio
+        
+        tasks = []
+        for agent_name in agents:
+            if agent_name in self.squad_agents:
+                task_coro = self._delegate_to_specialist(agent_name, task, context)
+                tasks.append(task_coro)
+        
+        if not tasks:
+            return {"content": [{"type": "text", "text": "No available agents for parallel analysis"}]}
+        
+        try:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Combine results
+            combined_result = "🔄 **Parallel Analysis Results**\n\n"
+            for i, (agent_name, result) in enumerate(zip(agents, results)):
+                if isinstance(result, Exception):
+                    combined_result += f"**{agent_name.replace('_', ' ').title()}**: Error - {str(result)}\n\n"
+                else:
+                    agent_result = result.get("content", [{}])[0].get("text", "No result")
+                    combined_result += f"**{agent_name.replace('_', ' ').title()}**:\n{agent_result}\n\n"
+            
+            return {"content": [{"type": "text", "text": combined_result}]}
+            
+        except Exception as e:
+            self.logger.error(f"Parallel analysis failed: {e}")
+            return {"content": [{"type": "text", "text": f"Parallel analysis failed: {str(e)}"}]}
+    
+    async def _synthesize_results(self, results: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Synthesize results from multiple agents using Creative Director."""
+        if "creative_director" not in self.squad_agents:
+            return {"content": [{"type": "text", "text": "Creative Director not available for synthesis"}]}
+        
+        synthesis_task = f"""
+        Please synthesize the following results from our creative team:
+        
+        Results: {json.dumps(results, indent=2)}
+        
+        Context: {json.dumps(context, indent=2)}
+        
+        Please provide:
+        1. Overall assessment and recommendations
+        2. Key insights and opportunities
+        3. Next steps and action plan
+        4. Priority scoring (1-10) for each recommendation
+        """
+        
+        return await self._delegate_to_specialist("creative_director", synthesis_task, context)
+    
+    # Squad Mode Delegation Tools
+    
+    @tool("delegate_to_account_manager", "Delegate brief analysis and client communication to Account Manager", {
+        "task": "str",
+        "context": "dict"
+    })
+    async def delegate_to_account_manager(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to Account Manager specialist."""
+        task = args.get("task", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        return await self._delegate_to_specialist("account_manager", task, context)
+    
+    @tool("delegate_to_creative_director", "Delegate creative strategy and concept synthesis to Creative Director", {
+        "task": "str",
+        "context": "dict"
+    })
+    async def delegate_to_creative_director(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to Creative Director specialist."""
+        task = args.get("task", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        return await self._delegate_to_specialist("creative_director", task, context)
+    
+    @tool("delegate_to_art_director", "Delegate visual concept and design direction to Art Director", {
+        "task": "str",
+        "context": "dict"
+    })
+    async def delegate_to_art_director(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to Art Director specialist."""
+        task = args.get("task", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        return await self._delegate_to_specialist("art_director", task, context)
+    
+    @tool("delegate_to_copywriter", "Delegate messaging and copy creation to Copywriter", {
+        "task": "str",
+        "context": "dict"
+    })
+    async def delegate_to_copywriter(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to Copywriter specialist."""
+        task = args.get("task", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        return await self._delegate_to_specialist("copywriter", task, context)
+    
+    @tool("delegate_to_strategy_planner", "Delegate market analysis and media strategy to Strategy Planner", {
+        "task": "str",
+        "context": "dict"
+    })
+    async def delegate_to_strategy_planner(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to Strategy Planner specialist."""
+        task = args.get("task", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        return await self._delegate_to_specialist("strategy_planner", task, context)
+    
+    @tool("delegate_to_production_manager", "Delegate timeline and production coordination to Production Manager", {
+        "task": "str",
+        "context": "dict"
+    })
+    async def delegate_to_production_manager(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to Production Manager specialist."""
+        task = args.get("task", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        return await self._delegate_to_specialist("production_manager", task, context)
+    
+    @tool("run_creative_squad_review", "Run parallel analysis with all creative specialists and synthesize results", {
+        "review_scope": "str",
+        "context": "dict"
+    })
+    async def run_creative_squad_review(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Run parallel analysis with all creative specialists and synthesize results."""
+        review_scope = args.get("review_scope", "")
+        context = args.get("context", {})
+        
+        if not self.squad_mode:
+            return {"content": [{"type": "text", "text": "Squad mode not enabled. Use --squad flag to enable multi-agent collaboration."}]}
+        
+        # Define which agents to include based on review scope
+        if "brief" in review_scope.lower():
+            agents = ["account_manager", "strategy_planner", "creative_director"]
+        elif "creative" in review_scope.lower():
+            agents = ["creative_director", "art_director", "copywriter"]
+        elif "strategy" in review_scope.lower():
+            agents = ["strategy_planner", "creative_director", "account_manager"]
+        elif "production" in review_scope.lower():
+            agents = ["production_manager", "creative_director", "account_manager"]
+        else:
+            # Full squad review
+            agents = ["account_manager", "strategy_planner", "creative_director", "art_director", "copywriter", "production_manager"]
+        
+        # Run parallel analysis
+        parallel_results = await self._parallel_analysis(agents, review_scope, context)
+        
+        # Synthesize results
+        synthesis_results = await self._synthesize_results(parallel_results, context)
+        
+        return synthesis_results
+
 
 async def main():
     """Main entry point for the Ad Agency Project Manager agent."""
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir)
+    import sys
     
-    print("🎯 Ad Agency Project Manager Agent")
-    print("=" * 50)
-    print("Welcome! I'm your AI Project Manager for advertising agencies.")
-    print("I can help you manage clients, projects, tasks, deadlines, and team coordination.")
-    print("\nAvailable commands:")
-    print("• Create clients and projects")
-    print("• Manage tasks and assignments")
-    print("• Track budgets and deadlines")
-    print("• Generate reports and analytics")
-    print("• Schedule meetings")
-    print("• Analyze team performance")
+    # Check for squad mode flag
+    squad_mode = "--squad" in sys.argv
+    
+    config_dir = Path("agents/ad-agency-pm")
+    agent = AdAgencyProjectManager(config_dir, squad_mode=squad_mode)
+    
+    if squad_mode:
+        print("🎯 Ad Agency Project Manager Agent - SQUAD MODE")
+        print("=" * 60)
+        print("Welcome! I'm your AI Project Manager with a full creative squad:")
+        print("• Account Manager - Brief analysis and client communication")
+        print("• Creative Director - Creative strategy and concept synthesis")
+        print("• Art Director - Visual concepts and design direction")
+        print("• Copywriter - Messaging and copy creation")
+        print("• Strategy Planner - Market analysis and media strategy")
+        print("• Production Manager - Timeline and production coordination")
+        print()
+        print("Squad Mode Features:")
+        print("• Multi-agent creative collaboration")
+        print("• Parallel analysis and synthesis")
+        print("• Specialized expertise for each discipline")
+        print("• Comprehensive creative workflow orchestration")
+        print()
+        print("Send me a creative brief or campaign idea, and I'll coordinate")
+        print("the entire creative team to develop a complete solution!")
+    else:
+        print("🎯 Ad Agency Project Manager Agent - SOLO MODE")
+        print("=" * 50)
+        print("Welcome! I'm your AI Project Manager for advertising agencies.")
+        print("I can help you manage clients, projects, tasks, deadlines, and team coordination.")
+        print("\nAvailable commands:")
+        print("• Create clients and projects")
+        print("• Manage tasks and assignments")
+        print("• Track budgets and deadlines")
+        print("• Generate reports and analytics")
+        print("• Schedule meetings")
+        print("• Analyze team performance")
+        print()
+        print("💡 Tip: Use --squad flag to enable multi-agent creative collaboration!")
+    
     print("\nType 'help' for more information or start with your request!")
     print("=" * 50)
     
