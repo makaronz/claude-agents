@@ -44,23 +44,40 @@ else
     fi
 fi
 
-# Create virtual environment
-echo "Creating virtual environment..."
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-    echo "✅ Virtual environment created"
+# Check uv package manager
+echo "Checking uv (Python packaging tool)..."
+if command -v uv &> /dev/null; then
+    echo "✅ uv detected: $(uv --version)"
 else
-    echo "✅ Virtual environment already exists"
+    echo "❌ uv not found. Please install uv from https://docs.astral.sh/uv/getting-started/ before running this script."
+    exit 1
+fi
+
+# Create virtual environment
+echo "Creating virtual environment with uv..."
+if [ ! -d ".venv" ]; then
+    uv venv --python python3
+    echo "✅ Virtual environment created at .venv/"
+else
+    echo "✅ Virtual environment already exists at .venv/"
 fi
 
 # Activate virtual environment
 echo "Activating virtual environment..."
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies
-echo "Installing Python dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+echo "Installing Python dependencies with uv..."
+if [ -f "uv.lock" ]; then
+    echo "🔒 Found uv.lock - installing locked dependencies..."
+    uv pip sync uv.lock
+else
+    echo "⚡ No uv.lock found - resolving latest versions from requirements.txt..."
+    uv pip sync requirements.txt
+    echo "📝 Generating uv.lock with resolved versions..."
+    uv pip compile requirements.txt -o uv.lock
+    echo "✅ Created uv.lock (commit this file to lock dependencies)"
+fi
 echo "✅ Python dependencies installed"
 
 # Create .env file if it doesn't exist

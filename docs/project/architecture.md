@@ -104,7 +104,7 @@ claude-agents/
 1. **Setup Environment**
    ```bash
    ./scripts/setup.sh
-   source venv/bin/activate
+   source .venv/bin/activate
    ```
 
 2. **Configure API Key**
@@ -115,8 +115,9 @@ claude-agents/
 
 3. **Test Setup**
    ```bash
-   python scripts/test_setup.py
+   uv run python scripts/test_setup.py
    ```
+   *(First run creates `uv.lock` from `requirements.txt`; regenerate it with `uv pip compile requirements.txt -o uv.lock` when updating dependencies.)*
 
 4. **Try Example Agent**
    ```bash

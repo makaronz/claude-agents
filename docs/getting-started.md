@@ -7,6 +7,7 @@ This guide will help you get started with creating and using Claude agents built
 - Python 3.10 or higher
 - Node.js (required for Claude Code CLI)
 - An Anthropic API key
+- [uv](https://docs.astral.sh/uv/) (Python packaging tool)
 - Basic familiarity with Python and async programming
 
 ## Installation
@@ -20,7 +21,8 @@ This guide will help you get started with creating and using Claude agents built
 
 2. **Activate the virtual environment**:
    ```bash
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   # Or run commands with uv without activating: uv run python ...
    ```
 
 3. **Install Claude Code CLI** (if not already installed):
@@ -33,6 +35,14 @@ This guide will help you get started with creating and using Claude agents built
    cp .env.example .env
    # Edit .env and add your ANTHROPIC_API_KEY
    ```
+
+### Managing Python Dependencies
+- On the first run the setup script resolves packages from `requirements.txt` and writes `uv.lock`; later runs read the lock file for reproducible installs.
+- Regenerate the lock file whenever you want to bump dependencies:
+  ```bash
+  uv pip compile requirements.txt -o uv.lock
+  ```
+- Delete `uv.lock` before re-running setup if you want to resolve everything from scratch.
 
 ## Try the Example Agent
 
@@ -154,7 +164,7 @@ claude-code --version
 
 ### Import Errors
 - Make sure you're in the correct virtual environment
-- Run `pip install -r requirements.txt` to install dependencies
+- Run `uv pip sync uv.lock` (or `uv pip sync requirements.txt` if you don't have a lock file) to install dependencies
 - Check that the shared modules are accessible
 
 ### Permission Issues

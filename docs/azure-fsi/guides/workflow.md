@@ -64,7 +64,9 @@ claude --version
 cd agents/azure-fsi-landingzone
 
 # Install dependencies
-pip install -r requirements.txt
+uv pip sync uv.lock         # if present
+# or resolve the latest versions
+uv pip sync requirements.txt
 ```
 
 ### Step 7: Configure Environment
@@ -865,7 +867,9 @@ python agent.py
 
 **Solution**:
 ```bash
-pip install -r requirements.txt
+uv pip sync uv.lock         # if present
+# or
+uv pip sync requirements.txt
 ```
 
 ### Error: "Failed to connect to Claude Agent SDK"

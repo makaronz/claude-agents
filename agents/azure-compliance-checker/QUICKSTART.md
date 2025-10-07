@@ -19,7 +19,9 @@ az account show
 ### 2. Python Dependencies
 ```bash
 cd agents/azure-compliance-checker
-pip install -r requirements.txt
+uv pip sync uv.lock         # if present
+# or resolve the latest versions
+uv pip sync requirements.txt
 ```
 
 ### 3. API Key

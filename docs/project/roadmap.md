@@ -51,6 +51,9 @@ Build a comprehensive collection of production-ready Claude agents for enterpris
 - ✅ **FSI Landing Zone + Compliance Checker**: Complete deploy-validate-remediate workflow
 - ✅ **MCP Integration**: Azure Landing Zones Library docs added to mcp.json
 
+### Developer Experience (Week 2)
+- [x] Adopted uv-based Python environment workflow with automatic `uv.lock` generation and reuse (setup script + docs updated)
+
 ---
 
 ## 🚧 In Progress (Current - October 2025)
@@ -243,6 +246,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - ✅ Introduced `avm-modules.yaml` manifest for AVM versions and metadata
 - ✅ Updated agent to consume manifest for prompt, tooling, and Bicep generation
 - ✅ Documented decision record (`docs/azure-fsi/architecture/avm.md`)
+
+### 2025-10-07: uv Environment Management
+- ✅ Updated `scripts/setup.sh` to require uv, manage the `.venv/`, auto-generate `uv.lock`, and reuse it on subsequent runs
+- ✅ Refreshed setup/test documentation to cover uv commands and lock-file workflow
 
 ### 2025-10-02: Identity & Access Management
 - ✅ Added Bastion template generator

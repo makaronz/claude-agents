@@ -35,14 +35,15 @@ This file provides guidance to AI coding agents (Claude Code, Gemini CLI, Codex 
 ### Setup
 ```bash
 ./scripts/setup.sh                      # Complete environment setup
-source venv/bin/activate                # Activate virtual environment
-python scripts/test_setup.py            # Verify installation
+source .venv/bin/activate               # Activate virtual environment (or use `uv run`)
+uv run python scripts/test_setup.py     # Verify installation
 ```
+> Dependency locking: the setup script writes `uv.lock` on first run (from `requirements.txt`) and reuses it afterwards. Run `uv pip compile requirements.txt -o uv.lock` when you need to refresh versions.
 
 ### Testing
 ```bash
-pytest tests/                           # Run all tests
-pytest tests/test_repository.py         # Run specific test file
+uv run pytest tests/                    # Run all tests
+uv run pytest tests/test_repository.py  # Run specific test file
 ```
 
 ### Running Agents
@@ -191,7 +192,7 @@ Test structure in tests/test_repository.py:
 - Uses `@patch.dict('os.environ', {...})` to mock environment variables
 - Uses `@pytest.mark.asyncio` for async test functions
 
-Run tests from repository root: `pytest tests/`
+Run tests from repository root: `uv run pytest tests/`
 
 ## Key Development Patterns
 

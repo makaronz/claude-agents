@@ -55,12 +55,12 @@ When using AI coding assistants with this repository, they'll automatically read
 
 ## Quick Start
 
-1. **Clone and set up the environment**
+1. **Install [uv](https://docs.astral.sh/uv/) (once) and run setup**
    ```bash
    git clone <repository-url>
    cd claude-agents
    ./scripts/setup.sh
-   source venv/bin/activate
+   source .venv/bin/activate  # Or use `uv run <command>` without activating
    ```
 
 2. **Configure your API key**
@@ -82,6 +82,15 @@ When using AI coding assistants with this repository, they'll automatically read
    # Edit config.yaml and agent.py
    python agent.py
    ```
+
+### Dependency Management with uv
+- On first run, the setup script resolves the newest compatible packages from `requirements.txt` and writes `uv.lock`.
+- Subsequent installs automatically use `uv.lock` for reproducible versions.
+- Refresh the lock file whenever you want to upgrade:
+  ```bash
+  uv pip compile requirements.txt -o uv.lock
+  ```
+- Commit `uv.lock` so teammates and CI get identical environments.
 
 ## Available Agents
 
@@ -107,7 +116,8 @@ See the [Azure FSI Documentation](docs/azure-fsi/) for detailed comparison and g
 - **Python 3.10+**
 - **Node.js 18+** (for Claude Code CLI)
 - **Claude Code CLI v2.0.1+**: `npm install -g @anthropic-ai/claude-code@latest` ⚠️ **REQUIRED**
-- **Claude Agent SDK v0.1.0+**: `pip install claude-agent-sdk>=0.1.0`
+- **uv 0.4+** (Python packaging tool)
+- **Claude Agent SDK v0.1.0+** (install with `uv pip sync uv.lock` or `uv pip sync requirements.txt`)
 - **Anthropic API key** (from https://console.anthropic.com)
 
 **Important**: Claude Code CLI v2.0.1+ is required for the claude-agent-sdk to work. Version 1.x is not compatible.

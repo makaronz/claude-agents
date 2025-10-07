@@ -27,7 +27,9 @@ git clone https://github.com/frntn/claude-agents.git
 cd claude-agents/agents/azure-fsi-landingzone
 
 # 3. Install Python dependencies
-pip install -r requirements.txt
+uv pip sync uv.lock         # if present
+# or resolve the latest versions
+uv pip sync requirements.txt
 
 # 4. Configure environment
 cp .env.example .env

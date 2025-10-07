@@ -1,29 +1,29 @@
 # Core dependencies for Claude agents
-claude-agent-sdk>=0.1.0
-pydantic>=2.0.0
-python-dotenv>=1.0.0
-pyyaml>=6.0.0
+claude-agent-sdk
+pydantic
+python-dotenv
+pyyaml
 
 # Development dependencies
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.5.0
+pytest
+pytest-asyncio
+black
+flake8
+mypy
 
 # Optional dependencies for common use cases
-requests>=2.31.0
-aiohttp>=3.8.0
-click>=8.0.0  # For CLI interfaces
-rich>=13.0.0  # For beautiful terminal output
+requests
+aiohttp
+click
+rich
 
 # Azure FSI Landing Zone agent dependencies
-azure-identity>=1.15.0
-azure-mgmt-resource>=23.0.0
-azure-mgmt-network>=25.0.0
-azure-mgmt-keyvault>=10.3.0
-azure-mgmt-storage>=21.1.0
-azure-mgmt-authorization>=4.0.0
-azure-mgmt-policyinsights>=1.1.0
-azure-mgmt-security>=6.0.0
-azure-mgmt-monitor>=6.0.0
+azure-identity
+azure-mgmt-resource
+azure-mgmt-network
+azure-mgmt-keyvault
+azure-mgmt-storage
+azure-mgmt-authorization
+azure-mgmt-policyinsights
+azure-mgmt-security
+azure-mgmt-monitor

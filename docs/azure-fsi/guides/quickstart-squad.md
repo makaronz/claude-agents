@@ -46,7 +46,9 @@ Expected: All 3 files should exist ✅
 ### Step 3: Install Python Dependencies
 
 ```bash
-pip install -r requirements.txt
+uv pip sync uv.lock         # if present
+# or resolve the latest versions
+uv pip sync requirements.txt
 ```
 
 **Verify installation:**
@@ -238,7 +240,9 @@ ls -la .env agent.py
 cd agents/azure-fsi-landingzone
 
 # Install dependencies
-pip install -r requirements.txt
+uv pip sync uv.lock         # if present
+# or
+uv pip sync requirements.txt
 
 # Verify installation
 python -c "import claude_agent_sdk"

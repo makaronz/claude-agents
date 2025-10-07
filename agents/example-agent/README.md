@@ -23,8 +23,9 @@ The example agent is a simple conversational assistant that:
 1. **Set up the environment** (from the repository root):
    ```bash
    ./scripts/setup.sh
-   source venv/bin/activate
+   source .venv/bin/activate
    ```
+   You can also skip activation and run commands with uv, e.g. `uv run python agents/example-agent/agent.py`.
 
 2. **Configure your API key** in `.env`:
    ```
