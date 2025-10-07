@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "Documentation_claude-agent-sdk-python": {
+      "type": "sse",
+      "url": "https://gitmcp.io/anthropics/claude-agent-sdk-python"
+    },
+    "Documentation_Azure-Landing-Zones-Library": {
+      "type": "sse",
+      "url": "https://azure.gitmcp.io/Azure-Landing-Zones-Library"
+    },
+    "Documentation_AGENTS-md": {
+      "type": "sse",
+      "url": "https://gitmcp.io/openai/agents.md"
+    },
+    "Github_claude-code": {
+      "type": "sse",
+      "url": "https://gitmcp.io/anthropics/claude-code"
+    }
+  }
+}

@@ -30,12 +30,28 @@ claude-agents/
 
 ## Features
 
-✨ **Built with Claude Agent SDK**: Uses the official Python SDK for Claude agents  
-🛠️ **Custom Tools**: Easy creation of custom MCP tools using decorators  
-🤖 **Interactive Agents**: Ready-to-use interactive conversation interfaces  
-⚙️ **Configuration Management**: YAML-based configuration with environment overrides  
-📝 **Comprehensive Logging**: Structured logging with file and console output  
-🎯 **Type Safety**: Full type hints and validation  
+✨ **Built with Claude Agent SDK**: Uses the official Python SDK for Claude agents
+🛠️ **Custom Tools**: Easy creation of custom MCP tools using decorators
+🤖 **Interactive Agents**: Ready-to-use interactive conversation interfaces
+⚙️ **Configuration Management**: YAML-based configuration with environment overrides
+📝 **Comprehensive Logging**: Structured logging with file and console output
+🎯 **Type Safety**: Full type hints and validation
+
+## AI Coding Agent Support
+
+This repository includes **[AGENTS.md](AGENTS.md)** - a standardized guidance file for AI coding agents following the [agents.md](https://agents.md) open format.
+
+**What's included:**
+- Common development commands (setup, testing, running agents)
+- High-level architecture overview (agent hierarchy, squad mode orchestration)
+- Azure FSI Landing Zone specifics (ring-based deployment, compliance)
+- Testing patterns and key development practices
+
+**Compatibility:**
+- ✅ **AGENTS.md** - Works with Gemini CLI, Codex CLI, Cursor, and other agents supporting the standard
+- ✅ **CLAUDE.md** - Symlinked to AGENTS.md for Claude Code compatibility (until [native support](https://github.com/anthropics/claude-code/issues/6235) is added)
+
+When using AI coding assistants with this repository, they'll automatically read AGENTS.md for project-specific context and instructions.
 
 ## Quick Start
 
