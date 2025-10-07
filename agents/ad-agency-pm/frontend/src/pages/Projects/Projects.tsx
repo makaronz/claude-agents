@@ -4,7 +4,7 @@ import { ProjectList } from '@/components/projects/ProjectList';
 import { Modal } from '@/components/common/Modal';
 import { useGetProjectsQuery } from '@/store/api/projectsApi';
 import { useAppSelector } from '@/store/hooks';
-import { Project } from '@/types/project';
+import type { Project } from '@/types/project';
 
 const Projects: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);

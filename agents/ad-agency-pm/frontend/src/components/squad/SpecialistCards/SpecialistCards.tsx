@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
-import { SpecialistResult } from '@/types/squad';
+import type { SpecialistResult } from '@/types/squad';
 import { SPECIALISTS, getSpecialistById } from '@/constants/specialists';
 import { cn } from '@/utils/helpers';
 

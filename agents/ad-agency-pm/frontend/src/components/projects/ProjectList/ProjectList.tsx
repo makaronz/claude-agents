@@ -1,7 +1,7 @@
 import React from 'react';
 import { ProjectCard } from '../ProjectCard';
 import { Loading } from '@/components/common/Loading';
-import { Project } from '@/types/project';
+import type { Project } from '@/types/project';
 import { cn } from '@/utils/helpers';
 
 export interface ProjectListProps {

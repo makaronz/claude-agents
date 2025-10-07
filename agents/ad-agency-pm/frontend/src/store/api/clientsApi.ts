@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { Client, CreateClientRequest, UpdateClientRequest } from '@/types/client';
+import type { Client, CreateClientRequest, UpdateClientRequest } from '@/types/client';
 import config from '@/config/environment';
 
 export const clientsApi = createApi({

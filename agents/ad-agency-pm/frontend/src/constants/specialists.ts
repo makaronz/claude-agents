@@ -1,4 +1,4 @@
-import { Specialist, SpecialistType } from '@/types/squad';
+import type { Specialist, SpecialistType } from '@/types/squad';
 
 export const SPECIALISTS: Specialist[] = [
   {

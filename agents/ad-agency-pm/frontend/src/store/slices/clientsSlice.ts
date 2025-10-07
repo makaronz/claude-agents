@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Client } from '@/types/client';
+import type { Client } from '@/types/client';
 
 interface ClientsState {
   clients: Client[];

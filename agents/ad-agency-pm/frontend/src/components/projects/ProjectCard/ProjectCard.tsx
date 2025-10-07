@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
-import { Project } from '@/types/project';
+import type { Project } from '@/types/project';
 import { cn, formatCurrency, formatDate, getStatusColor, getPriorityColor, getInitials } from '@/utils/helpers';
 
 export interface ProjectCardProps {
