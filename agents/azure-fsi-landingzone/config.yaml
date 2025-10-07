@@ -36,14 +36,7 @@ azure:
 
     # Azure Verified Modules (AVM)
     use_avm_modules: true
-    avm_modules:
-      - "avm/res/network/virtual-network"
-      - "avm/res/network/network-security-group"
-      - "avm/res/key-vault/vault"
-      - "avm/res/storage/storage-account"
-      - "avm/res/security/security-center"
-      - "avm/res/policy/policy-assignment"
-      - "avm/res/management/management-group"
+    avm_manifest: "avm-modules.yaml"  # Central manifest for module versions and metadata
 
     # Default region for deployments
     default_region: "francecentral"

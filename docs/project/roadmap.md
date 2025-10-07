@@ -94,6 +94,7 @@ Build a comprehensive collection of production-ready Claude agents for enterpris
 - ✅ Documentation: `docs/azure-fsi/implementation/avm-usage.md`
 - ✅ Changelog: `CHANGELOG_AVM.md`
 - ✅ All templates validated with Azure CLI (`az bicep build`)
+- ✅ Centralized AVM manifest (`agents/azure-fsi-landingzone/avm-modules.yaml`) loaded by agent tools and templates
 
 ---
 
@@ -237,6 +238,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - ✅ Created validation test suite (5/5 templates passing)
 - ✅ Documented AVM implementation in `docs/azure-fsi/implementation/avm-usage.md`
 - ✅ Created `CHANGELOG_AVM.md` with detailed changes
+
+### 2025-10-07: AVM Manifest Externalization
+- ✅ Introduced `avm-modules.yaml` manifest for AVM versions and metadata
+- ✅ Updated agent to consume manifest for prompt, tooling, and Bicep generation
+- ✅ Documented decision record (`docs/azure-fsi/architecture/avm.md`)
 
 ### 2025-10-02: Identity & Access Management
 - ✅ Added Bastion template generator

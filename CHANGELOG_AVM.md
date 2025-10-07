@@ -1,5 +1,33 @@
 # AVM Implementation Changelog
 
+## 2025-10-07: Centralized AVM Manifest
+
+### Summary
+Externalized AVM module versions and metadata into a dedicated manifest so the agent no longer hard-codes registry references in Python.
+
+### Changes Made
+
+1. **Manifest Introduced**
+   - Added `agents/azure-fsi-landingzone/avm-modules.yaml` with module registry paths, versions, and descriptive metadata.
+
+2. **Agent Loads Manifest at Runtime**
+   - `list_avm_modules`, Bicep template generators, and the system prompt now consume the manifest (with fallbacks for resilience).
+   - JSON deployment plan output reflects the manifest contents.
+
+3. **Configuration Update**
+   - `agents/azure-fsi-landingzone/config.yaml` now references the manifest via `avm_manifest`.
+
+4. **Documentation**
+   - Updated AVM implementation guide to explain the manifest.
+
+### Benefits
+
+- Single source of truth for AVM versions
+- Easier updates without touching Python code
+- Consistent information across prompt, tooling, and generated templates
+
+---
+
 ## 2025-10-07: Actual AVM Integration
 
 ### Summary

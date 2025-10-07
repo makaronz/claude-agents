@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import List, Any, Optional, Dict
 from datetime import datetime
 from dotenv import load_dotenv
+import yaml
 
 # Load environment variables from .env file
 load_dotenv(Path(__file__).parent / ".env")
@@ -71,6 +72,9 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
         self.environment_type: Optional[str] = None  # dev, test, staging, prod, sandbox
         self.deployment_strategy: str = "shared-hub"  # full-rings, shared-hub, minimal
 
+        # Cached AVM manifest (lazy-loaded)
+        self._avm_manifest: Optional[Dict[str, Dict[str, Any]]] = None
+
     def get_project_dir(self) -> Path:
         """
         Get the project directory for storing generated assets.
@@ -83,6 +87,78 @@ class AzureFSILandingZoneAgent(InteractiveAgent):
         project_dir = self.config_dir / self.project_name
         project_dir.mkdir(parents=True, exist_ok=True)
         return project_dir
+
+    # -------------------------------------------------------------------------
+    # Azure Verified Module (AVM) manifest helpers
+    # -------------------------------------------------------------------------
+
+    def _avm_manifest_path(self) -> Path:
+        """Resolve the AVM manifest path from configuration."""
+        manifest_name = self.azure_config.get('landing_zone', {}).get('avm_manifest', 'avm-modules.yaml')
+        candidate = self.config_dir / manifest_name
+        if candidate.exists():
+            return candidate
+
+        fallback = Path(__file__).parent / manifest_name
+        if fallback.exists():
+            return fallback
+
+        raise FileNotFoundError(f"AVM manifest not found: {manifest_name}")
+
+    def _load_avm_manifest(self) -> Dict[str, Dict[str, Any]]:
+        """Load and cache AVM manifest contents."""
+        if self._avm_manifest is None:
+            manifest_path = self._avm_manifest_path()
+            with open(manifest_path, 'r', encoding='utf-8') as manifest_file:
+                manifest_data = yaml.safe_load(manifest_file) or {}
+            self._avm_manifest = manifest_data.get('modules', {})
+        return self._avm_manifest
+
+    def _avm_module_metadata(self, module_key: str) -> Dict[str, Any]:
+        """Return metadata for a given AVM module."""
+        manifest = self._load_avm_manifest()
+        if module_key not in manifest:
+            raise KeyError(f"Module '{module_key}' not defined in AVM manifest")
+        return manifest[module_key]
+
+    def _avm_module_reference(self, module_key: str, *, fallback: Optional[str] = None) -> str:
+        """
+        Return the fully qualified AVM module reference for Bicep templates.
+
+        When the module is marked as native or missing essentials, raise unless
+        a fallback is provided.
+        """
+        try:
+            metadata = self._avm_module_metadata(module_key)
+            if metadata.get('status') == 'native':
+                raise ValueError(f"Module '{module_key}' uses native resources (no AVM module available)")
+
+            registry = metadata.get('registry')
+            version = metadata.get('version')
+            if not registry or not version:
+                raise ValueError(f"Module '{module_key}' is missing registry or version in manifest")
+
+            return f"{registry}:{version}"
+        except (FileNotFoundError, KeyError, ValueError) as exc:
+            if fallback:
+                if hasattr(self, 'logger'):
+                    self.logger.warning("Using fallback AVM module reference for %s (%s)", module_key, exc)
+                return fallback
+            raise
+
+    def _avm_manifest_summary(self) -> List[Dict[str, Any]]:
+        """Return manifest data in a list form for reporting/serialization."""
+        summary = []
+        for key, details in self._load_avm_manifest().items():
+            entry = {
+                "key": key,
+                "display_name": details.get("display_name", key.replace("_", " ").title()),
+                "registry": details.get("registry"),
+                "version": details.get("version"),
+                "status": details.get("status", "available"),
+            }
+            summary.append(entry)
+        return summary
 
     async def _initialize_squad(self) -> None:
         """Initialize squad agents on-demand (lazy loading)."""
@@ -186,7 +262,24 @@ Please provide:
 
     def get_system_prompt(self) -> Optional[str]:
         """Get the system prompt for this agent."""
-        base_prompt = """You are an Azure Financial Services Industry (FSI) Landing Zone deployment expert.
+        virtual_network_ref = self._avm_module_reference(
+            'virtual_network',
+            fallback="br/public:avm/res/network/virtual-network:0.1.8",
+        )
+        azure_firewall_ref = self._avm_module_reference(
+            'azure_firewall',
+            fallback="br/public:avm/res/network/azure-firewall:0.3.0",
+        )
+        key_vault_ref = self._avm_module_reference(
+            'key_vault',
+            fallback="br/public:avm/res/key-vault/vault:0.6.2",
+        )
+        storage_account_ref = self._avm_module_reference(
+            'storage_account',
+            fallback="br/public:avm/res/storage/storage-account:0.9.1",
+        )
+
+        base_prompt = f"""You are an Azure Financial Services Industry (FSI) Landing Zone deployment expert.
 
 You help organizations deploy secure, compliant Azure infrastructure using:
 
@@ -195,10 +288,10 @@ You help organizations deploy secure, compliant Azure infrastructure using:
 3. **European Compliance**: Built-in policies for GDPR, DORA, PSD2, MiFID II, EBA Guidelines
 
 All generated Bicep templates use AVM modules from the official Bicep Public Registry:
-- Virtual Networks: br/public:avm/res/network/virtual-network:0.1.8
-- Azure Firewall: br/public:avm/res/network/azure-firewall:0.3.0
-- Key Vault: br/public:avm/res/key-vault/vault:0.6.2
-- Storage Accounts: br/public:avm/res/storage/storage-account:0.9.1
+- Virtual Networks: {virtual_network_ref}
+- Azure Firewall: {azure_firewall_ref}
+- Key Vault: {key_vault_ref}
+- Storage Accounts: {storage_account_ref}
 - Policy Assignments: Native resources (AVM module not yet available)
 
 IMPORTANT: Before generating any files (templates, plans, etc.), you MUST:
@@ -1160,63 +1253,58 @@ main
     @tool("list_avm_modules", "List available Azure Verified Modules (AVM) for FSI landing zone", {})
     async def list_avm_modules(self, args):
         """List Azure Verified Modules."""
-        avm_modules = self.azure_config.get('landing_zone', {}).get('avm_modules', [])
-
-        module_details = {
-            "avm/res/network/virtual-network": {
-                "description": "Virtual Network with subnets, NSGs, and routing",
-                "use_case": "Hub and spoke network architecture",
-                "key_features": ["DDoS protection", "Service endpoints", "Private endpoints"]
-            },
-            "avm/res/network/network-security-group": {
-                "description": "Network Security Groups with security rules",
-                "use_case": "Subnet and NIC level security",
-                "key_features": ["Allow/deny rules", "Service tags", "ASG support"]
-            },
-            "avm/res/key-vault/vault": {
-                "description": "Key Vault for secrets, keys, and certificates",
-                "use_case": "Centralized secrets management for FSI",
-                "key_features": ["RBAC", "Private endpoints", "Soft delete", "Purge protection"]
-            },
-            "avm/res/storage/storage-account": {
-                "description": "Storage Account with advanced security",
-                "use_case": "Secure data storage with compliance features",
-                "key_features": ["Encryption at rest", "Immutable storage", "Private endpoints"]
-            },
-            "avm/res/security/security-center": {
-                "description": "Microsoft Defender for Cloud configuration",
-                "use_case": "Security posture management and threat protection",
-                "key_features": ["Regulatory compliance", "Secure score", "Recommendations"]
-            },
-            "avm/res/policy/policy-assignment": {
-                "description": "Azure Policy assignments for governance",
-                "use_case": "Enforce compliance and security policies",
-                "key_features": ["Built-in policies", "Custom policies", "Remediation tasks"]
-            },
-            "avm/res/management/management-group": {
-                "description": "Management Groups for organizational hierarchy",
-                "use_case": "Enterprise-scale governance structure",
-                "key_features": ["Policy inheritance", "RBAC inheritance", "Cost management"]
+        try:
+            manifest = self._load_avm_manifest()
+        except FileNotFoundError:
+            return {
+                "content": [
+                    {"type": "text", "text": "❌ No AVM manifest found. Ensure avm-modules.yaml exists in the agent directory."}
+                ]
             }
-        }
 
-        avm_text = "📦 Azure Verified Modules (AVM) for FSI Landing Zone:\n\n"
-        avm_text += "These are production-ready, Microsoft-validated infrastructure modules.\n\n"
+        if not manifest:
+            return {
+                "content": [
+                    {"type": "text", "text": "⚠️ AVM manifest is empty. Add modules to avm-modules.yaml to expose them here."}
+                ]
+            }
 
-        for module in avm_modules:
-            if module in module_details:
-                details = module_details[module]
-                avm_text += f"🔷 {module}\n"
-                avm_text += f"   Description: {details['description']}\n"
-                avm_text += f"   Use Case: {details['use_case']}\n"
-                avm_text += f"   Features: {', '.join(details['key_features'])}\n\n"
+        avm_text = "📦 Azure Verified Modules (AVM) for FSI Landing Zone\n\n"
+        avm_text += "Modules are sourced from the central manifest (avm-modules.yaml):\n\n"
 
-        avm_text += "💡 All modules follow Microsoft best practices and include:\n"
-        avm_text += "   • Security baseline configuration\n"
-        avm_text += "   • Diagnostic settings integration\n"
-        avm_text += "   • Tags for resource management\n"
-        avm_text += "   • Role assignments support\n"
-        avm_text += "   • Private endpoints where applicable\n"
+        for key, details in manifest.items():
+            display_name = details.get("display_name", key.replace("_", " ").title())
+            status = details.get("status", "available")
+            registry = details.get("registry")
+            version = details.get("version")
+            description = details.get("description")
+            use_case = details.get("use_case")
+            features = details.get("key_features", [])
+
+            avm_text += f"🔷 {display_name}\n"
+            avm_text += f"   Key: {key}\n"
+
+            if status == "native":
+                avm_text += "   Status: Native Azure resources (AVM module pending)\n"
+            elif status != "available":
+                status_label = status.replace("_", " ").title()
+                avm_text += f"   Status: {status_label}\n"
+
+            if registry and version:
+                avm_text += f"   Module: {registry}:{version}\n"
+            elif registry:
+                avm_text += f"   Module: {registry}\n"
+
+            if description:
+                avm_text += f"   Description: {description}\n"
+            if use_case:
+                avm_text += f"   Use Case: {use_case}\n"
+            if features:
+                avm_text += f"   Features: {', '.join(features)}\n"
+
+            avm_text += "\n"
+
+        avm_text += "💡 Use `avm-modules.yaml` to update versions or add new modules without changing agent code.\n"
 
         return {
             "content": [
@@ -1281,6 +1369,8 @@ main
         """Generate Hub VNet Bicep template using Azure Verified Modules."""
         hub_config = self.azure_config.get('architecture', {}).get('hub', {})
         naming = self.azure_config.get('landing_zone', {})
+        vnet_module = self._avm_module_reference('virtual_network')
+        firewall_module = self._avm_module_reference('azure_firewall')
 
         return f"""// Hub Virtual Network for FSI Landing Zone
 // Generated by Azure FSI Landing Zone Agent
@@ -1295,7 +1385,7 @@ var hubVNetName = '${{namingPrefix}}-hub-vnet-${{environment}}'
 var addressSpace = '{hub_config.get('vnet_address_space', '10.0.0.0/16')}'
 
 // Hub Virtual Network using AVM module
-module hubVNet 'br/public:avm/res/network/virtual-network:0.1.8' = {{
+module hubVNet '{vnet_module}' = {{
   name: 'deploy-hub-vnet'
   params: {{
     name: hubVNetName
@@ -1328,7 +1418,7 @@ module hubVNet 'br/public:avm/res/network/virtual-network:0.1.8' = {{
 }}
 
 // Azure Firewall using AVM module
-module firewall 'br/public:avm/res/network/azure-firewall:0.3.0' = {{
+module firewall '{firewall_module}' = {{
   name: 'deploy-hub-firewall'
   params: {{
     name: '${{namingPrefix}}-hub-fw-${{environment}}'
@@ -1357,6 +1447,7 @@ output firewallId string = firewall.outputs.resourceId
         """Generate Spoke VNet Bicep template using Azure Verified Modules."""
         spoke_config = self.azure_config.get('architecture', {}).get('spoke_template', {})
         naming = self.azure_config.get('landing_zone', {})
+        vnet_module = self._avm_module_reference('virtual_network')
 
         return f"""// Spoke Virtual Network for FSI Landing Zone
 // Generated by Azure FSI Landing Zone Agent
@@ -1372,7 +1463,7 @@ param hubVNetId string
 var spokeVNetName = '${{namingPrefix}}-${{spokeName}}-vnet-${{environment}}'
 
 // Spoke Virtual Network using AVM module
-module spokeVNet 'br/public:avm/res/network/virtual-network:0.1.8' = {{
+module spokeVNet '{vnet_module}' = {{
   name: 'deploy-${{spokeName}}-vnet'
   params: {{
     name: spokeVNetName
@@ -1422,6 +1513,7 @@ output spokeVNetName string = spokeVNet.outputs.name
     def _generate_keyvault_bicep(self) -> str:
         """Generate Key Vault Bicep template using Azure Verified Modules."""
         naming = self.azure_config.get('landing_zone', {})
+        key_vault_module = self._avm_module_reference('key_vault')
 
         return f"""// Azure Key Vault for FSI Landing Zone
 // Generated by Azure FSI Landing Zone Agent
@@ -1435,7 +1527,7 @@ param logAnalyticsWorkspaceId string = ''
 var keyVaultName = '${{namingPrefix}}-kv-${{uniqueString(resourceGroup().id)}}'
 
 // Key Vault using AVM module
-module keyVault 'br/public:avm/res/key-vault/vault:0.6.2' = {{
+module keyVault '{key_vault_module}' = {{
   name: 'deploy-keyvault'
   params: {{
     name: keyVaultName
@@ -1480,6 +1572,7 @@ output keyVaultUri string = keyVault.outputs.uri
     def _generate_storage_bicep(self) -> str:
         """Generate Storage Account Bicep template using Azure Verified Modules."""
         naming = self.azure_config.get('landing_zone', {})
+        storage_module = self._avm_module_reference('storage_account')
 
         return f"""// Storage Account for FSI Landing Zone
 // Generated by Azure FSI Landing Zone Agent
@@ -1493,7 +1586,7 @@ param logAnalyticsWorkspaceId string = ''
 var storageAccountName = '${{namingPrefix}}st${{uniqueString(resourceGroup().id)}}'
 
 // Storage Account using AVM module
-module storageAccount 'br/public:avm/res/storage/storage-account:0.9.1' = {{
+module storageAccount '{storage_module}' = {{
   name: 'deploy-storage-account'
   params: {{
     name: storageAccountName
@@ -2540,7 +2633,7 @@ output bastionDnsName string = bastionPublicIP.properties.dnsSettings.fqdn
                 "custom_policies": self.compliance_config.get('custom_policies', {})
             },
             "architecture": self.azure_config.get('architecture', {}),
-            "avm_modules": self.azure_config.get('landing_zone', {}).get('avm_modules', []),
+            "avm_modules": [],
             "deployment_steps": [
                 "Prerequisites Check",
                 "Policy Assignment",
@@ -2550,6 +2643,11 @@ output bastionDnsName string = bastionPublicIP.properties.dnsSettings.fqdn
                 "Compliance Validation"
             ]
         }
+        try:
+            plan["avm_modules"] = self._avm_manifest_summary()
+        except FileNotFoundError:
+            plan["avm_modules"] = []
+
         return json.dumps(plan, indent=2)
 
     # ============================================================================

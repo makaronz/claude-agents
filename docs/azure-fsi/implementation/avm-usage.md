@@ -16,6 +16,17 @@ Previously, the agent only *referenced* AVM in documentation but generated custo
 | **Storage Account** | `avm/res/storage/storage-account` | 0.9.1 | `br/public:avm/res/storage/storage-account:0.9.1` |
 | **Policy Assignments** | *Native resources* | N/A | AVM module not yet available |
 
+## Version Management
+
+Module versions and metadata are centrally managed in `agents/azure-fsi-landingzone/avm-modules.yaml`.
+Updating that manifest automatically refreshes:
+
+- System prompt references to AVM modules
+- The `list_avm_modules` tool output
+- Generated Bicep templates for hub/spoke VNets, Azure Firewall, Key Vault, and Storage Accounts
+
+This keeps AVM usage consistent across the agent without editing the Python source.
+
 ## Example: Hub VNet Template
 
 ### Before (Custom Resources)

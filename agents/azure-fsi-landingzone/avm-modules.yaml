@@ -1,0 +1,92 @@
+metadata:
+  generated: "2025-10-07"
+  source: "Azure Bicep Public Registry (br/public)"
+  notes: "Managed manifest for Azure Verified Modules used by Azure FSI Landing Zone agent."
+
+modules:
+  virtual_network:
+    display_name: "Virtual Network"
+    registry: "br/public:avm/res/network/virtual-network"
+    version: "0.1.8"
+    description: "Virtual Network with subnets, NSGs, and routing controls"
+    use_case: "Hub-and-spoke network foundation for FSI workloads"
+    key_features:
+      - "DDoS protection plan support"
+      - "Service endpoints and private endpoints"
+      - "Custom subnet definitions"
+
+  azure_firewall:
+    display_name: "Azure Firewall"
+    registry: "br/public:avm/res/network/azure-firewall"
+    version: "0.3.0"
+    description: "Azure Firewall with premium threat protection"
+    use_case: "Secure perimeter for hub virtual network traffic inspection"
+    key_features:
+      - "Premium SKU support"
+      - "Threat intelligence mode configuration"
+      - "Public IP management"
+
+  key_vault:
+    display_name: "Key Vault"
+    registry: "br/public:avm/res/key-vault/vault"
+    version: "0.6.2"
+    description: "Azure Key Vault with RBAC and purge protection"
+    use_case: "Secrets management and encryption key storage"
+    key_features:
+      - "Premium SKU with HSM-backed keys"
+      - "RBAC and soft-delete enforcement"
+      - "Diagnostic settings integration"
+
+  storage_account:
+    display_name: "Storage Account"
+    registry: "br/public:avm/res/storage/storage-account"
+    version: "0.9.1"
+    description: "Storage Account with enhanced compliance controls"
+    use_case: "Durable storage for financial services data"
+    key_features:
+      - "Geo-redundant replication (GRS)"
+      - "Immutable storage and retention policies"
+      - "Private network access and TLS enforcement"
+
+  network_security_group:
+    display_name: "Network Security Group"
+    registry: "br/public:avm/res/network/network-security-group"
+    status: "planned"
+    description: "Network Security Group with Azure best-practice rules"
+    use_case: "Subnet and NIC-level traffic filtering"
+    key_features:
+      - "Allow/deny rule definitions"
+      - "Service tag usage"
+      - "Application security group support"
+
+  security_center:
+    display_name: "Microsoft Defender for Cloud"
+    registry: "br/public:avm/res/security/security-center"
+    status: "planned"
+    description: "Defender for Cloud configuration for secure posture management"
+    use_case: "Continuous security posture monitoring"
+    key_features:
+      - "Regulatory compliance tracking"
+      - "Secure score improvements"
+      - "Automated recommendations"
+
+  management_group:
+    display_name: "Management Group"
+    registry: "br/public:avm/res/management/management-group"
+    status: "planned"
+    description: "Management group hierarchy configuration"
+    use_case: "Enterprise-scale governance and policy inheritance"
+    key_features:
+      - "RBAC inheritance"
+      - "Cost management alignment"
+      - "Policy propagation"
+
+  policy_assignment:
+    display_name: "Policy Assignment"
+    status: "native"
+    description: "Azure Policy assignment using native resources (AVM module pending)"
+    use_case: "Apply FSI compliance and governance policies"
+    key_features:
+      - "Supports built-in initiatives"
+      - "Custom policy parameters"
+      - "Managed identity support"
