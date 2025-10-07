@@ -48,7 +48,7 @@ Expected: All 3 files should exist ✅
 ```bash
 uv pip sync uv.lock         # if present
 # or resolve the latest versions
-uv pip sync requirements.txt
+uv pip install -r requirements.txt
 ```
 
 **Verify installation:**
@@ -242,7 +242,7 @@ cd agents/azure-fsi-landingzone
 # Install dependencies
 uv pip sync uv.lock         # if present
 # or
-uv pip sync requirements.txt
+uv pip install -r requirements.txt
 
 # Verify installation
 python -c "import claude_agent_sdk"

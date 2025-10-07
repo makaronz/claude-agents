@@ -26,8 +26,8 @@ This is a template for creating new Claude agents. Copy this directory and custo
 3. Install dependencies:
    ```bash
    uv pip sync uv.lock         # if you have a lock file
-   # or
-   uv pip sync requirements.txt
+   # or bootstrap from requirements
+   uv pip install -r requirements.txt
    ```
 
 4. Run your agent:

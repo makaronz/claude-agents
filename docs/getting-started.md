@@ -164,7 +164,7 @@ claude-code --version
 
 ### Import Errors
 - Make sure you're in the correct virtual environment
-- Run `uv pip sync uv.lock` (or `uv pip sync requirements.txt` if you don't have a lock file) to install dependencies
+- Run `uv pip sync uv.lock` (or bootstrap with `uv pip install -r requirements.txt` if you don't have a lock file) to install dependencies
 - Check that the shared modules are accessible
 
 ### Permission Issues

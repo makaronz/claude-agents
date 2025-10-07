@@ -84,7 +84,7 @@ def test_imports():
         
     except ImportError as e:
         print(f"❌ Import test failed: {e}")
-        print("💡 Make sure you've run: uv pip sync uv.lock (or requirements.txt if no lock file)")
+        print("💡 Make sure you've run: uv pip sync uv.lock (or bootstrap with 'uv pip install -r requirements.txt')")
         return False
     except Exception as e:
         print(f"❌ Import test failed: {e}")

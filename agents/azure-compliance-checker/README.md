@@ -71,7 +71,7 @@ This agent validates Azure infrastructure against user-defined compliance contro
    ```bash
    uv pip sync uv.lock         # if present
    # or resolve the latest versions
-   uv pip sync requirements.txt
+   uv pip install -r requirements.txt
    ```
 
 3. **Anthropic API Key**

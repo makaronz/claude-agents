@@ -117,7 +117,7 @@ See the [Azure FSI Documentation](docs/azure-fsi/) for detailed comparison and g
 - **Node.js 18+** (for Claude Code CLI)
 - **Claude Code CLI v2.0.1+**: `npm install -g @anthropic-ai/claude-code@latest` ⚠️ **REQUIRED**
 - **uv 0.4+** (Python packaging tool)
-- **Claude Agent SDK v0.1.0+** (install with `uv pip sync uv.lock` or `uv pip sync requirements.txt`)
+- **Claude Agent SDK v0.1.0+** (install with `uv pip sync uv.lock` or bootstrap with `uv pip install -r requirements.txt`)
 - **Anthropic API key** (from https://console.anthropic.com)
 
 **Important**: Claude Code CLI v2.0.1+ is required for the claude-agent-sdk to work. Version 1.x is not compatible.

@@ -73,9 +73,11 @@ if [ -f "uv.lock" ]; then
     uv pip sync uv.lock
 else
     echo "⚡ No uv.lock found - resolving latest versions from requirements.txt..."
-    uv pip sync requirements.txt
+    uv pip install -r requirements.txt
     echo "📝 Generating uv.lock with resolved versions..."
     uv pip compile requirements.txt -o uv.lock
+    echo "♻️ Re-syncing environment with generated uv.lock..."
+    uv pip sync uv.lock
     echo "✅ Created uv.lock (commit this file to lock dependencies)"
 fi
 echo "✅ Python dependencies installed"
