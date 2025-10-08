@@ -41,6 +41,12 @@ export const useWebSocket = () => {
   const reconnectAttempts = useRef(0);
 
   useEffect(() => {
+    // Skip WebSocket if no URL configured
+    if (!config.WS_URL) {
+      console.log('WebSocket disabled - no backend server');
+      return;
+    }
+
     const newSocket = io(config.WS_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,

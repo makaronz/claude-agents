@@ -6,7 +6,7 @@ interface AppConfig {
 
 const config: AppConfig = {
   API_URL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  WS_URL: import.meta.env.VITE_WS_URL || 'ws://localhost:8000',
+  WS_URL: import.meta.env.VITE_WS_URL || '', // Disabled for now - no backend
   ENVIRONMENT: (import.meta.env.MODE as AppConfig['ENVIRONMENT']) || 'development',
 };
 
