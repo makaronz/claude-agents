@@ -1,805 +1,388 @@
 ---
-globs: src/components/**/*.tsx,src/components/**/*.ts,frontend/components/**/*.tsx,frontend/components/**/*.ts
+globs: *.tsx,*.ts
 description: React component development patterns and best practices
 ---
 
-# ⚛️ React Component Development
+# React Component Development Patterns
 
-## 🏗️ Component Architecture
+## Component Structure
 
-### Component Structure Template
+### File Organization
+```
+components/
+├── common/              # Reusable UI components
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   └── index.ts
+│   ├── Input/
+│   └── Modal/
+├── projects/            # Feature-specific components
+│   ├── ProjectForm/
+│   └── ProjectList/
+└── layout/             # Layout components
+    ├── Header/
+    ├── Sidebar/
+    └── Layout/
+```
 
-**Always use this structure for new components:**
-
+### Component Template
 ```typescript
-// 1. Imports (external libraries first, then internal)
-import React, { useState, useEffect, useCallback } from 'react';
-import { ComponentProps } from './types';
+import React from 'react';
 import { cn } from '@/utils/helpers';
 
-// 2. Type definitions
-interface ComponentNameProps {
-  // Required props first
-  title: string;
-  items: Item[];
-  
-  // Optional props with defaults
-  variant?: 'default' | 'primary' | 'secondary';
-  size?: 'sm' | 'md' | 'lg';
+interface ComponentProps {
   className?: string;
-  
-  // Event handlers
-  onItemClick?: (item: Item) => void;
-  onItemDelete?: (itemId: string) => void;
-  
-  // Children
   children?: React.ReactNode;
+  // Other props with proper typing
 }
 
-// 3. Component implementation
-const ComponentName: React.FC<ComponentNameProps> = ({
-  title,
-  items,
-  variant = 'default',
-  size = 'md',
+export const Component: React.FC<ComponentProps> = ({
   className,
-  onItemClick,
-  onItemDelete,
   children,
   ...props
 }) => {
-  // 4. State and hooks
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  
-  // 5. Event handlers
-  const handleItemClick = useCallback((item: Item) => {
-    setSelectedItem(item);
-    onItemClick?.(item);
-  }, [onItemClick]);
-  
-  const handleItemDelete = useCallback((itemId: string) => {
-    onItemDelete?.(itemId);
-  }, [onItemDelete]);
-  
-  // 6. Effects
-  useEffect(() => {
-    // Effect logic here
-  }, []);
-  
-  // 7. Render
   return (
-    <div
-      className={cn(
-        'base-classes',
-        variant === 'primary' && 'primary-classes',
-        size === 'lg' && 'large-classes',
-        className
-      )}
+    <div 
+      className={cn("base-classes", className)}
       {...props}
     >
-      <h2 className="component-title">{title}</h2>
       {children}
     </div>
   );
 };
 
-// 8. Display name and export
-ComponentName.displayName = 'ComponentName';
-export default ComponentName;
+Component.displayName = 'Component';
 ```
 
-### Component File Organization
+## Context Integration
 
-**Follow this file structure for each component:**
-
-```
-ComponentName/
-├── ComponentName.tsx          # Main component
-├── ComponentName.test.tsx     # Unit tests
-├── ComponentName.stories.tsx  # Storybook stories
-├── types.ts                   # TypeScript types
-├── hooks.ts                   # Custom hooks (if needed)
-├── utils.ts                   # Component utilities (if needed)
-└── index.ts                   # Export file
-```
-
-## 🎯 Component Patterns
-
-### Compound Components
-
-**Use compound components for complex UI elements:**
-
+### Using Context in Components
 ```typescript
-// Card compound component
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
-}
+import { useProjectContext } from '@/context';
 
-const Card: React.FC<CardProps> & {
-  Header: React.FC<CardHeaderProps>;
-  Content: React.FC<CardContentProps>;
-  Footer: React.FC<CardFooterProps>;
-} = ({ children, className }) => {
-  return (
-    <div className={cn('card-base', className)}>
-      {children}
-    </div>
-  );
-};
-
-interface CardHeaderProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-Card.Header = ({ children, className }) => (
-  <div className={cn('card-header', className)}>
-    {children}
-  </div>
-);
-
-interface CardContentProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-Card.Content = ({ children, className }) => (
-  <div className={cn('card-content', className)}>
-    {children}
-  </div>
-);
-
-interface CardFooterProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-Card.Footer = ({ children, className }) => (
-  <div className={cn('card-footer', className)}>
-    {children}
-  </div>
-);
-
-// Usage
-<Card>
-  <Card.Header>
-    <h3>Card Title</h3>
-  </Card.Header>
-  <Card.Content>
-    <p>Card content goes here</p>
-  </Card.Content>
-  <Card.Footer>
-    <button>Action</button>
-  </Card.Footer>
-</Card>
-```
-
-### Render Props Pattern
-
-**Use render props for flexible component composition:**
-
-```typescript
-interface DataFetcherProps<T> {
-  url: string;
-  children: (data: {
-    data: T | null;
-    loading: boolean;
-    error: string | null;
-    refetch: () => void;
-  }) => React.ReactNode;
-}
-
-function DataFetcher<T>({ url, children }: DataFetcherProps<T>) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const ProjectComponent = () => {
+  const { state, addProject, updateProject } = useProjectContext();
   
-  const fetchData = useCallback(async () => {
+  // Handle context actions
+  const handleAddProject = (project: Project) => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(url);
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
+      addProject(project);
+    } catch (error) {
+      console.error('Failed to add project:', error);
     }
-  }, [url]);
-  
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  
-  return <>{children({ data, loading, error, refetch: fetchData })}</>;
-}
-
-// Usage
-<DataFetcher<Project[]> url="/api/projects">
-  {({ data, loading, error, refetch }) => {
-    if (loading) return <Loading />;
-    if (error) return <ErrorMessage error={error} onRetry={refetch} />;
-    return <ProjectList projects={data || []} />;
-  }}
-</DataFetcher>
-```
-
-### Higher-Order Components
-
-**Use HOCs for cross-cutting concerns:**
-
-```typescript
-interface WithLoadingProps {
-  loading: boolean;
-}
-
-function withLoading<P extends object>(
-  Component: React.ComponentType<P>
-): React.FC<P & WithLoadingProps> {
-  return ({ loading, ...props }) => {
-    if (loading) {
-      return <Loading />;
-    }
-    return <Component {...(props as P)} />;
   };
-}
 
-// Usage
-const ProjectListWithLoading = withLoading(ProjectList);
-
-// In component
-<ProjectListWithLoading projects={projects} loading={isLoading} />
-```
-
-## 🎨 Styling Patterns
-
-### CSS-in-JS with Tailwind
-
-**Use Tailwind classes with conditional styling:**
-
-```typescript
-interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'danger' | 'squad';
-  size?: 'sm' | 'md' | 'lg';
-  loading?: boolean;
-  disabled?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}
-
-const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  disabled = false,
-  className,
-  children,
-  ...props
-}) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
-  
-  const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    squad: 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 focus:ring-purple-500 shadow-lg',
-  };
-  
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
-  };
-  
   return (
-    <button
-      className={cn(
-        baseClasses,
-        variantClasses[variant],
-        sizeClasses[size],
-        className
-      )}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading && (
-        <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      )}
-      {children}
-    </button>
-  );
-};
-```
-
-### Responsive Design
-
-**Use responsive utilities consistently:**
-
-```typescript
-const ResponsiveGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {children}
+    <div>
+      {/* Component JSX */}
     </div>
   );
 };
+```
 
-const ResponsiveText: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <p className="text-sm sm:text-base md:text-lg lg:text-xl">
-      {children}
-    </p>
-  );
+### Error Handling for Context
+```typescript
+// Safe context usage with fallbacks
+const useSafeContext = () => {
+  try {
+    return useProjectContext();
+  } catch (error) {
+    // Return default values or handle gracefully
+    return {
+      state: initialState,
+      addProject: () => {},
+      updateProject: () => {},
+    };
+  }
 };
 ```
 
-## 🔄 State Management in Components
+## Form Components
 
-### Local State Patterns
-
-**Use useState for simple local state:**
-
+### Controlled Components
 ```typescript
-const ToggleButton: React.FC = () => {
-  const [isToggled, setIsToggled] = useState(false);
-  
-  const handleToggle = useCallback(() => {
-    setIsToggled(prev => !prev);
-  }, []);
-  
+interface FormFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  required?: boolean;
+}
+
+export const FormField: React.FC<FormFieldProps> = ({
+  label,
+  value,
+  onChange,
+  error,
+  required = false,
+}) => {
   return (
-    <button
-      onClick={handleToggle}
-      className={cn(
-        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-        isToggled ? 'bg-blue-600' : 'bg-gray-200'
-      )}
-    >
-      <span
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className={cn(
-          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-          isToggled ? 'translate-x-6' : 'translate-x-1'
+          "mt-1 block w-full px-3 py-2 border rounded-md",
+          error ? "border-red-500" : "border-gray-300",
+          "focus:outline-none focus:ring-primary-500 focus:border-primary-500"
         )}
       />
-    </button>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    </div>
   );
 };
 ```
 
-### Custom Hooks for Complex State
-
-**Extract complex state logic into custom hooks:**
-
+### Form Validation Integration
 ```typescript
-// hooks/useForm.ts
-interface UseFormOptions<T> {
-  initialValues: T;
-  validationSchema?: z.ZodSchema<T>;
-  onSubmit: (values: T) => void | Promise<void>;
-}
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-export function useForm<T extends Record<string, any>>({
-  initialValues,
-  validationSchema,
-  onSubmit,
-}: UseFormOptions<T>) {
-  const [values, setValues] = useState<T>(initialValues);
-  const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const setValue = useCallback((field: keyof T, value: any) => {
-    setValues(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [errors]);
-  
-  const validate = useCallback(() => {
-    if (!validationSchema) return true;
-    
+const FormComponent = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    setValue,
+  } = useForm<FormData>({
+    resolver: zodResolver(validationSchema),
+  });
+
+  const onSubmit = async (data: FormData) => {
     try {
-      validationSchema.parse(values);
-      setErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const fieldErrors: Partial<Record<keyof T, string>> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0] as keyof T] = err.message;
-          }
-        });
-        setErrors(fieldErrors);
-      }
-      return false;
-    }
-  }, [values, validationSchema]);
-  
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validate()) return;
-    
-    setIsSubmitting(true);
-    try {
-      await onSubmit(values);
+      // Handle form submission
+      console.log('Form data:', data);
     } catch (error) {
       console.error('Form submission error:', error);
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [values, validate, onSubmit]);
-  
-  return {
-    values,
-    errors,
-    isSubmitting,
-    setValue,
-    handleSubmit,
   };
-}
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* Form fields using register() */}
+    </form>
+  );
+};
 ```
 
-## 🎯 Performance Optimization
+## State Management
+
+### Local State Patterns
+```typescript
+const Component = () => {
+  // Simple state
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Complex state with useReducer
+  const [state, dispatch] = useReducer(reducer, initialState);
+  
+  // Derived state
+  const filteredItems = useMemo(() => 
+    items.filter(item => item.status === 'active'),
+    [items]
+  );
+
+  // Effects
+  useEffect(() => {
+    // Side effects
+  }, [dependency]);
+
+  return <div>{/* Component JSX */}</div>;
+};
+```
+
+### Context State Updates
+```typescript
+const Component = () => {
+  const { state, dispatch } = useProjectContext();
+  
+  // Batch updates
+  const handleBatchUpdate = () => {
+    dispatch({ type: 'BATCH_START' });
+    dispatch({ type: 'UPDATE_ITEM_1', payload: data1 });
+    dispatch({ type: 'UPDATE_ITEM_2', payload: data2 });
+    dispatch({ type: 'BATCH_END' });
+  };
+
+  return <div>{/* Component JSX */}</div>;
+};
+```
+
+## Performance Optimization
 
 ### Memoization Patterns
-
-**Use React.memo for expensive components:**
-
 ```typescript
-interface ProjectCardProps {
-  project: Project;
-  onEdit: (project: Project) => void;
-  onView: (project: Project) => void;
-}
+import React, { memo, useMemo, useCallback } from 'react';
 
-const ProjectCard = memo<ProjectCardProps>(({ project, onEdit, onView }) => {
-  const handleEdit = useCallback(() => {
-    onEdit(project);
-  }, [project, onEdit]);
-  
-  const handleView = useCallback(() => {
-    onView(project);
-  }, [project, onView]);
-  
+// Component memoization
+export const ExpensiveComponent = memo<Props>(({ data, onUpdate }) => {
+  // Expensive calculations
+  const processedData = useMemo(() => 
+    data.map(item => expensiveCalculation(item)),
+    [data]
+  );
+
+  // Stable callbacks
+  const handleUpdate = useCallback((id: string) => {
+    onUpdate(id);
+  }, [onUpdate]);
+
+  return <div>{/* Component JSX */}</div>;
+});
+
+ExpensiveComponent.displayName = 'ExpensiveComponent';
+```
+
+### Avoiding Unnecessary Re-renders
+```typescript
+// Use React.memo for expensive components
+const ProjectCard = memo<ProjectCardProps>(({ project, onEdit }) => {
   return (
     <div className="project-card">
-      <h3>{project.name}</h3>
-      <p>{project.description}</p>
-      <div className="flex space-x-2">
-        <button onClick={handleView}>View</button>
-        <button onClick={handleEdit}>Edit</button>
-      </div>
+      {/* Card content */}
     </div>
   );
 });
 
-ProjectCard.displayName = 'ProjectCard';
-```
-
-### Virtual Scrolling
-
-**Use virtual scrolling for large lists:**
-
-```typescript
-import { FixedSizeList as List } from 'react-window';
-
-interface VirtualizedListProps<T> {
-  items: T[];
-  height: number;
-  itemHeight: number;
-  renderItem: (props: { index: number; style: React.CSSProperties; item: T }) => React.ReactNode;
-}
-
-function VirtualizedList<T>({ items, height, itemHeight, renderItem }: VirtualizedListProps<T>) {
-  return (
-    <List
-      height={height}
-      itemCount={items.length}
-      itemSize={itemHeight}
-      itemData={items}
-    >
-      {({ index, style, data }) => renderItem({ index, style, item: data[index] })}
-    </List>
+// Use useMemo for expensive calculations
+const Component = ({ items }) => {
+  const sortedItems = useMemo(() => 
+    items.sort((a, b) => a.name.localeCompare(b.name)),
+    [items]
   );
-}
 
-// Usage
-<VirtualizedList
-  items={projects}
-  height={600}
-  itemHeight={120}
-  renderItem={({ index, style, item }) => (
-    <div style={style}>
-      <ProjectCard project={item} />
-    </div>
-  )}
-/>
-```
-
-## 🧪 Testing Patterns
-
-### Component Testing
-
-**Write comprehensive component tests:**
-
-```typescript
-// ProjectCard.test.tsx
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ProjectCard } from './ProjectCard';
-import { Project } from '@/types/project';
-
-const mockProject: Project = {
-  id: '1',
-  name: 'Test Project',
-  description: 'Test Description',
-  clientName: 'Test Client',
-  status: 'In Progress',
-  priority: 'High',
-  progress: 75,
-  budget: 25000,
-  deadline: '2025-02-01',
-  teamMembers: [],
-  createdAt: '2025-01-01',
-  updatedAt: '2025-01-10',
+  return <div>{/* Component JSX */}</div>;
 };
-
-describe('ProjectCard', () => {
-  it('renders project information correctly', () => {
-    render(<ProjectCard project={mockProject} onEdit={jest.fn()} onView={jest.fn()} />);
-    
-    expect(screen.getByText('Test Project')).toBeInTheDocument();
-    expect(screen.getByText('Test Client')).toBeInTheDocument();
-    expect(screen.getByText('In Progress')).toBeInTheDocument();
-    expect(screen.getByText('75%')).toBeInTheDocument();
-  });
-  
-  it('calls onEdit when edit button is clicked', () => {
-    const onEdit = jest.fn();
-    render(<ProjectCard project={mockProject} onEdit={onEdit} onView={jest.fn()} />);
-    
-    fireEvent.click(screen.getByText('Edit'));
-    expect(onEdit).toHaveBeenCalledWith(mockProject);
-  });
-  
-  it('calls onView when view button is clicked', () => {
-    const onView = jest.fn();
-    render(<ProjectCard project={mockProject} onEdit={jest.fn()} onView={onView} />);
-    
-    fireEvent.click(screen.getByText('View'));
-    expect(onView).toHaveBeenCalledWith(mockProject);
-  });
-  
-  it('applies correct status styling', () => {
-    render(<ProjectCard project={mockProject} onEdit={jest.fn()} onView={jest.fn()} />);
-    
-    const statusElement = screen.getByText('In Progress');
-    expect(statusElement).toHaveClass('bg-blue-100', 'text-blue-800');
-  });
-});
 ```
 
-### Hook Testing
+## Error Boundaries
 
-**Test custom hooks with renderHook:**
-
+### Component Error Handling
 ```typescript
-// useForm.test.ts
-import { renderHook, act } from '@testing-library/react';
-import { useForm } from './useForm';
-import { z } from 'zod';
+import React, { Component, ReactNode } from 'react';
 
-const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email'),
-});
-
-describe('useForm', () => {
-  it('initializes with correct values', () => {
-    const { result } = renderHook(() =>
-      useForm({
-        initialValues: { name: 'John', email: 'john@example.com' },
-        validationSchema: schema,
-        onSubmit: jest.fn(),
-      })
-    );
-    
-    expect(result.current.values).toEqual({ name: 'John', email: 'john@example.com' });
-    expect(result.current.errors).toEqual({});
-  });
-  
-  it('validates form data correctly', () => {
-    const { result } = renderHook(() =>
-      useForm({
-        initialValues: { name: '', email: 'invalid-email' },
-        validationSchema: schema,
-        onSubmit: jest.fn(),
-      })
-    );
-    
-    act(() => {
-      result.current.handleSubmit({ preventDefault: jest.fn() } as any);
-    });
-    
-    expect(result.current.errors.name).toBe('Name is required');
-    expect(result.current.errors.email).toBe('Invalid email');
-  });
-});
-```
-
-## 🔒 Accessibility Patterns
-
-### ARIA Attributes
-
-**Always include proper ARIA attributes:**
-
-```typescript
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    if (isOpen && modalRef.current) {
-      modalRef.current.focus();
-    }
-  }, [isOpen]);
-  
-  if (!isOpen) return null;
-  
-  return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-        <div
-          ref={modalRef}
-          className="relative bg-white rounded-lg shadow-xl max-w-md w-full"
-          tabIndex={-1}
-        >
-          <div className="p-6">
-            <h2 id="modal-title" className="text-lg font-semibold mb-4">
-              {title}
-            </h2>
-            {children}
-          </div>
+export class ErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <h2>Something went wrong.</h2>
+          <details>
+            {this.state.error?.message}
+          </details>
         </div>
-      </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## Accessibility
+
+### ARIA and Semantic HTML
+```typescript
+const AccessibleComponent = () => {
+  return (
+    <div>
+      {/* Use semantic HTML */}
+      <main role="main">
+        <section aria-labelledby="section-heading">
+          <h2 id="section-heading">Section Title</h2>
+          
+          {/* Form with proper labels */}
+          <form>
+            <label htmlFor="input-id">Input Label</label>
+            <input 
+              id="input-id"
+              aria-describedby="input-help"
+              aria-invalid={hasError}
+            />
+            {hasError && (
+              <div id="input-help" role="alert">
+                Error message
+              </div>
+            )}
+          </form>
+        </section>
+      </main>
     </div>
   );
 };
 ```
 
 ### Keyboard Navigation
-
-**Implement proper keyboard navigation:**
-
 ```typescript
-const Dropdown: React.FC<{ items: string[]; onSelect: (item: string) => void }> = ({
-  items,
-  onSelect,
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+const KeyboardNavigableComponent = () => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setFocusedIndex(prev => Math.min(prev + 1, items.length - 1));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setFocusedIndex(prev => Math.max(prev - 1, -1));
-        break;
       case 'Enter':
       case ' ':
-        e.preventDefault();
-        if (focusedIndex >= 0) {
-          onSelect(items[focusedIndex]);
-          setIsOpen(false);
-        }
+        // Handle activation
         break;
       case 'Escape':
-        setIsOpen(false);
-        buttonRef.current?.focus();
+        // Handle close
         break;
     }
-  }, [items, focusedIndex, onSelect]);
-  
+  };
+
   return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
-        onKeyDown={handleKeyDown}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        className="dropdown-button"
-      >
-        Select Item
-      </button>
-      
-      {isOpen && (
-        <ul
-          ref={listRef}
-          role="listbox"
-          className="dropdown-list"
-          onKeyDown={handleKeyDown}
-        >
-          {items.map((item, index) => (
-            <li
-              key={item}
-              role="option"
-              aria-selected={index === focusedIndex}
-              className={cn(
-                'dropdown-item',
-                index === focusedIndex && 'focused'
-              )}
-              onClick={() => {
-                onSelect(item);
-                setIsOpen(false);
-              }}
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      role="button"
+      aria-label="Action description"
+    >
+      Interactive content
     </div>
   );
 };
 ```
 
-## 🎯 Best Practices Summary
+## Testing Considerations
 
-### Component Design ✅
-- Use TypeScript for all components
-- Follow consistent file organization
-- Implement proper prop interfaces
-- Use displayName for debugging
-- Extract complex logic into custom hooks
-
-### Performance ✅
-- Use React.memo for expensive components
-- Implement useCallback for event handlers
-- Use useMemo for expensive calculations
-- Implement virtual scrolling for large lists
-- Lazy load components when possible
-
-### Accessibility ✅
-- Include proper ARIA attributes
-- Implement keyboard navigation
-- Use semantic HTML elements
-- Provide focus management
-- Test with screen readers
-
-### Testing ✅
-- Write comprehensive unit tests
-- Test user interactions
-- Test accessibility features
-- Use proper test utilities
-- Mock external dependencies
+### Component Testing Patterns
+```typescript
+// Test component behavior, not implementation
+describe('ProjectForm', () => {
+  it('should submit form with valid data', async () => {
+    const mockSubmit = jest.fn();
+    render(<ProjectForm onSubmit={mockSubmit} />);
+    
+    await user.type(screen.getByLabelText(/project name/i), 'Test Project');
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+    
+    expect(mockSubmit).toHaveBeenCalledWith({
+      name: 'Test Project',
+      // ... other expected data
+    });
+  });
+});
+```

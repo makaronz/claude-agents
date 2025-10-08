@@ -66,7 +66,53 @@ const ClientContext = createContext<ClientContextType | undefined>(undefined);
 
 // Provider
 export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(clientReducer, initialState);
+  const [state, dispatch] = useReducer(clientReducer, {
+    ...initialState,
+    clients: [
+      {
+        id: 'client-1',
+        name: 'Nike Inc.',
+        email: 'contact@nike.com',
+        phone: '+1-555-0123',
+        company: 'Nike Inc.',
+        industry: 'Sports & Fashion',
+        budgetRange: '$100k-$500k',
+        notes: 'Major sports brand, seasonal campaigns',
+        activeProjects: 2,
+        lastContact: '2024-01-15',
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-15',
+      },
+      {
+        id: 'client-2',
+        name: 'Apple Inc.',
+        email: 'marketing@apple.com',
+        phone: '+1-555-0456',
+        company: 'Apple Inc.',
+        industry: 'Technology',
+        budgetRange: '$500k+',
+        notes: 'Premium brand, high-quality requirements',
+        activeProjects: 1,
+        lastContact: '2024-02-01',
+        createdAt: '2024-01-15',
+        updatedAt: '2024-02-01',
+      },
+      {
+        id: 'client-3',
+        name: 'Local Startup',
+        email: 'founder@localstartup.com',
+        phone: '+1-555-0789',
+        company: 'Local Startup Co.',
+        industry: 'SaaS',
+        budgetRange: '$10k-$50k',
+        notes: 'Early-stage company, budget-conscious',
+        activeProjects: 0,
+        lastContact: '2024-01-20',
+        createdAt: '2024-01-10',
+        updatedAt: '2024-01-20',
+      },
+    ],
+  });
 
   // Action creators
   const setLoading = (loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading });

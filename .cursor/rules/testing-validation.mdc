@@ -1,584 +1,420 @@
 ---
-globs: tests/**/*.py,agents/**/test_*.py,**/test_*.py
 description: Testing and validation patterns for Claude agents
 ---
 
-# 🧪 Testing and Validation Patterns
+# Testing and Validation Patterns
 
-## 🏗️ Test Structure and Organization
+## Form Validation with Zod
 
-### Test Directory Structure
+### Schema Definition
+```typescript
+import { z } from 'zod';
 
-```
-tests/
-├── test_repository.py          # Main repository tests
-├── test_shared_utils.py        # Shared utilities tests
-└── agents/                     # Agent-specific tests
-    ├── test_example_agent.py
-    ├── test_azure_fsi_agent.py
-    └── test_ad_agency_pm.py
-```
+// Project validation schema
+const projectSchema = z.object({
+  name: z.string()
+    .min(1, 'Project name is required')
+    .max(100, 'Name too long'),
+  description: z.string()
+    .min(10, 'Description must be at least 10 characters')
+    .max(500, 'Description too long'),
+  clientId: z.string().min(1, 'Please select a client'),
+  budget: z.number()
+    .min(0, 'Budget must be positive')
+    .max(10000000, 'Budget too high'),
+  deadline: z.string().min(1, 'Deadline is required'),
+  priority: z.enum(['Low', 'Medium', 'High', 'Critical'] as const),
+  teamMembers: z.array(z.string()).min(1, 'Select at least one team member'),
+});
 
-### Test File Naming Convention
-
-- **Test files**: `test_*.py` or `*_test.py`
-- **Test classes**: `Test*` (e.g., `TestSharedUtils`)
-- **Test methods**: `test_*` (e.g., `test_config_loading`)
-
-## 🔧 Async Testing Patterns
-
-### Basic Async Test Structure
-
-```python
-import pytest
-import asyncio
-from unittest.mock import patch, AsyncMock
-from pathlib import Path
-
-@pytest.mark.asyncio
-async def test_agent_initialization():
-    """Test agent initialization with proper configuration."""
-    from shared.agents import InteractiveAgent
-    
-    config_dir = Path("agents/example-agent")
-    agent = InteractiveAgent(config_dir)
-    
-    assert agent is not None
-    assert agent.config_dir == config_dir
-    assert agent.logger is not None
+// Client validation schema
+const clientSchema = z.object({
+  name: z.string().min(1, 'Client name is required'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
+  company: z.string().min(1, 'Company name is required'),
+  industry: z.string().min(1, 'Industry is required'),
+  budgetRange: z.string().min(1, 'Budget range is required'),
+});
 ```
 
-### Testing Agent Tools
+### Form Integration
+```typescript
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-```python
-@pytest.mark.asyncio
-async def test_custom_tool_execution():
-    """Test custom tool execution with various inputs."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir)
-    
-    # Test successful tool execution
-    result = await agent.create_client({
-        "name": "Test Client",
-        "email": "test@example.com",
-        "industry": "Technology"
-    })
-    
-    assert "content" in result
-    assert len(result["content"]) > 0
-    assert result["content"][0]["type"] == "text"
-    assert "Created" in result["content"][0]["text"]
-```
+const FormComponent = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    setValue,
+  } = useForm<ProjectFormData>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      clientId: '',
+      budget: 0,
+      deadline: '',
+      priority: 'Medium',
+      teamMembers: [],
+    },
+  });
 
-### Testing Error Handling
-
-```python
-@pytest.mark.asyncio
-async def test_tool_error_handling():
-    """Test tool error handling with invalid inputs."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir)
-    
-    # Test with missing required parameters
-    result = await agent.create_client({
-        "name": "",  # Invalid empty name
-        "email": "invalid-email"  # Invalid email format
-    })
-    
-    assert "content" in result
-    assert "Error" in result["content"][0]["text"]
-```
-
-## 🎭 Squad Mode Testing
-
-### Squad Mode Initialization Testing
-
-```python
-@pytest.mark.asyncio
-async def test_squad_mode_initialization():
-    """Test squad mode initialization and sub-agent loading."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
-    
-    # Test squad mode is enabled
-    assert agent.squad_mode == True
-    
-    # Test sub-agents are loaded
-    assert len(agent.squad_agents) > 0
-    
-    # Test specific sub-agents
-    expected_agents = [
-        "account-manager",
-        "creative-director", 
-        "art-director",
-        "copywriter",
-        "strategy-planner",
-        "production-manager"
-    ]
-    
-    for agent_name in expected_agents:
-        assert agent_name in agent.squad_agents
-        assert agent.squad_agents[agent_name] is not None
-```
-
-### Delegation Testing
-
-```python
-@pytest.mark.asyncio
-async def test_delegation_tools():
-    """Test delegation tools in squad mode."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
-    
-    # Test delegation tools are available
-    tools = agent.get_custom_tools()
-    delegation_tools = [tool for tool in tools if 'delegate' in tool.name]
-    
-    assert len(delegation_tools) > 0
-    
-    # Test specific delegation tool
-    result = await agent.delegate_to_account_manager({
-        "task": "Analyze client brief",
-        "context": "New eco-friendly sneaker brand"
-    })
-    
-    assert "content" in result
-    assert len(result["content"]) > 0
-```
-
-### Parallel Analysis Testing
-
-```python
-@pytest.mark.asyncio
-async def test_parallel_analysis():
-    """Test parallel analysis across multiple agents."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
-    
-    # Test parallel analysis
-    agent_names = ["creative-director", "art-director", "copywriter"]
-    results = await agent._parallel_analysis(
-        agent_names,
-        "Create brand identity for luxury hotel",
-        "Premium hospitality brand targeting business travelers"
-    )
-    
-    assert isinstance(results, dict)
-    assert len(results) > 0
-    
-    # Check that all requested agents provided results
-    for agent_name in agent_names:
-        if agent_name in agent.squad_agents:  # Only check if agent is available
-            assert agent_name in results
-            assert isinstance(results[agent_name], str)
-            assert len(results[agent_name]) > 0
-```
-
-## 🔍 Mocking and Patching
-
-### Environment Variable Mocking
-
-```python
-@patch.dict('os.environ', {
-    'ANTHROPIC_API_KEY': 'test-api-key',
-    'AGENT_CONFIG_PATH': '/test/path'
-})
-def test_environment_variable_loading():
-    """Test environment variable loading and configuration."""
-    from shared.utils.config import load_config
-    
-    config = load_config()
-    
-    assert config.get('api_key') == 'test-api-key'
-    assert config.get('config_path') == '/test/path'
-```
-
-### File System Mocking
-
-```python
-@patch('pathlib.Path.exists')
-@patch('pathlib.Path.read_text')
-def test_config_file_loading(mock_read_text, mock_exists):
-    """Test configuration file loading with mocked file system."""
-    mock_exists.return_value = True
-    mock_read_text.return_value = """
-    name: Test Agent
-    version: 1.0.0
-    model: claude-3-5-sonnet-20240620
-    """
-    
-    from shared.utils.config import load_yaml_config
-    
-    config = load_yaml_config(Path("test-config.yaml"))
-    
-    assert config['name'] == 'Test Agent'
-    assert config['version'] == '1.0.0'
-    assert config['model'] == 'claude-3-5-sonnet-20240620'
-```
-
-### Async Mocking
-
-```python
-@pytest.mark.asyncio
-async def test_async_operation_mocking():
-    """Test async operations with mocked responses."""
-    from unittest.mock import AsyncMock
-    
-    # Mock async function
-    mock_async_function = AsyncMock(return_value="mocked result")
-    
-    # Test the mocked function
-    result = await mock_async_function("test input")
-    
-    assert result == "mocked result"
-    mock_async_function.assert_called_once_with("test input")
-```
-
-## 📊 Data Validation Testing
-
-### JSON Data Validation
-
-```python
-def test_json_data_validation():
-    """Test JSON data loading and validation."""
-    from shared.utils.validation import validate_json_data
-    
-    # Valid JSON data
-    valid_data = {
-        "name": "Test Client",
-        "email": "test@example.com",
-        "industry": "Technology"
+  const onSubmit = async (data: ProjectFormData) => {
+    try {
+      // Validate data before submission
+      const validatedData = projectSchema.parse(data);
+      console.log('Validated data:', validatedData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation errors:', error.errors);
+      }
     }
-    
-    is_valid, error = validate_json_data(valid_data, {
-        "name": "str",
-        "email": "str", 
-        "industry": "str"
-    })
-    
-    assert is_valid == True
-    assert error == ""
-    
-    # Invalid JSON data
-    invalid_data = {
-        "name": "Test Client",
-        "email": 123,  # Should be string
-        "industry": "Technology"
-    }
-    
-    is_valid, error = validate_json_data(invalid_data, {
-        "name": "str",
-        "email": "str",
-        "industry": "str"
-    })
-    
-    assert is_valid == False
-    assert "email" in error
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* Form fields with error display */}
+    </form>
+  );
+};
 ```
 
-### File Operations Testing
+## Component Testing Patterns
 
-```python
-def test_file_operations():
-    """Test file operations with temporary files."""
-    import tempfile
-    import json
-    from pathlib import Path
+### Unit Testing with Testing Library
+```typescript
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ProjectForm } from './ProjectForm';
+
+describe('ProjectForm', () => {
+  it('should render all form fields', () => {
+    render(<ProjectForm onSuccess={jest.fn()} />);
     
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        
-        # Test data saving
-        test_data = {"test": "data", "number": 42}
-        data_file = temp_path / "test.json"
-        
-        with open(data_file, 'w') as f:
-            json.dump(test_data, f)
-        
-        # Test data loading
-        with open(data_file, 'r') as f:
-            loaded_data = json.load(f)
-        
-        assert loaded_data == test_data
-        assert data_file.exists()
+    expect(screen.getByLabelText(/project name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/client/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/budget/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/deadline/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/priority/i)).toBeInTheDocument();
+  });
+
+  it('should validate required fields', async () => {
+    const user = userEvent.setup();
+    render(<ProjectForm onSuccess={jest.fn()} />);
+    
+    const submitButton = screen.getByRole('button', { name: /create project/i });
+    await user.click(submitButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText(/project name is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/description must be at least 10 characters/i)).toBeInTheDocument();
+    });
+  });
+
+  it('should submit form with valid data', async () => {
+    const user = userEvent.setup();
+    const mockOnSuccess = jest.fn();
+    render(<ProjectForm onSuccess={mockOnSuccess} />);
+    
+    // Fill form
+    await user.type(screen.getByLabelText(/project name/i), 'Test Project');
+    await user.type(screen.getByLabelText(/description/i), 'This is a test project description');
+    await user.selectOptions(screen.getByLabelText(/client/i), 'client-1');
+    await user.type(screen.getByLabelText(/budget/i), '50000');
+    await user.type(screen.getByLabelText(/deadline/i), '2024-06-15');
+    
+    // Select team members
+    await user.click(screen.getByRole('checkbox', { name: /john doe/i }));
+    await user.click(screen.getByRole('checkbox', { name: /jane smith/i }));
+    
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /create project/i }));
+    
+    await waitFor(() => {
+      expect(mockOnSuccess).toHaveBeenCalled();
+    });
+  });
+});
 ```
 
-## 🚀 Integration Testing
+### Context Testing
+```typescript
+import { renderHook, act } from '@testing-library/react';
+import { ProjectProvider, useProjectContext } from './ProjectContext';
 
-### End-to-End Agent Testing
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <ProjectProvider>{children}</ProjectProvider>
+);
 
-```python
-@pytest.mark.asyncio
-async def test_agent_end_to_end():
-    """Test complete agent workflow from initialization to response."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+describe('ProjectContext', () => {
+  it('should add project correctly', () => {
+    const { result } = renderHook(() => useProjectContext(), { wrapper });
     
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir)
+    const newProject = {
+      id: 'test-1',
+      name: 'Test Project',
+      description: 'Test description',
+      clientId: 'client-1',
+      clientName: 'Test Client',
+      status: 'Not Started' as const,
+      priority: 'Medium' as const,
+      progress: 0,
+      budget: 50000,
+      deadline: '2024-06-15',
+      teamMembers: [],
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
     
-    # Test complete workflow
-    # 1. Create client
-    client_result = await agent.create_client({
-        "name": "Integration Test Client",
-        "email": "integration@test.com",
-        "industry": "Technology"
-    })
+    act(() => {
+      result.current.addProject(newProject);
+    });
     
-    assert "Created" in client_result["content"][0]["text"]
+    expect(result.current.state.projects).toContain(newProject);
+  });
+
+  it('should filter projects correctly', () => {
+    const { result } = renderHook(() => useProjectContext(), { wrapper });
     
-    # 2. Create project
-    project_result = await agent.create_project({
-        "name": "Integration Test Project",
-        "client_name": "Integration Test Client",
-        "type": "Brand Identity",
-        "budget": 50000
-    })
+    // Add test projects
+    act(() => {
+      result.current.addProject({ ...mockProject, status: 'In Progress' });
+      result.current.addProject({ ...mockProject, status: 'Planning' });
+    });
     
-    assert "Created" in project_result["content"][0]["text"]
+    // Set filter
+    act(() => {
+      result.current.setFilters({ status: 'In Progress' });
+    });
     
-    # 3. Create task
-    task_result = await agent.create_task({
-        "name": "Integration Test Task",
-        "project_name": "Integration Test Project",
-        "assignee": "Test User",
-        "deadline": "2025-02-01"
-    })
-    
-    assert "Created" in task_result["content"][0]["text"]
-    
-    # 4. Generate report
-    report_result = await agent.generate_project_report({
-        "project_name": "Integration Test Project"
-    })
-    
-    assert "Report" in report_result["content"][0]["text"]
+    expect(result.current.state.filters.status).toBe('In Progress');
+  });
+});
 ```
 
-### Squad Mode Integration Testing
+## E2E Testing with Playwright
 
-```python
-@pytest.mark.asyncio
-async def test_squad_mode_integration():
-    """Test complete squad mode workflow."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
+### Form Submission Testing
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('Project Creation', () => {
+  test('should create a new project successfully', async ({ page }) => {
+    await page.goto('/projects');
     
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
+    // Open create project modal
+    await page.click('[data-testid="create-project-btn"]');
     
-    # Test squad review workflow
-    squad_result = await agent.run_creative_squad_review({
-        "task": "Create comprehensive brand strategy",
-        "context": "New sustainable fashion brand targeting millennials"
-    })
+    // Fill form
+    await page.fill('[data-testid="project-name"]', 'E2E Test Project');
+    await page.fill('[data-testid="project-description"]', 'This is an E2E test project');
+    await page.selectOption('[data-testid="client-select"]', 'client-1');
+    await page.fill('[data-testid="project-budget"]', '75000');
+    await page.fill('[data-testid="project-deadline"]', '2024-07-01');
     
-    assert "content" in squad_result
-    assert len(squad_result["content"]) > 0
+    // Select team members
+    await page.check('[data-testid="team-member-creative-director"]');
+    await page.check('[data-testid="team-member-copywriter"]');
     
-    # Verify squad synthesis
-    result_text = squad_result["content"][0]["text"]
-    assert "Squad" in result_text or "Analysis" in result_text
+    // Submit form
+    await page.click('[data-testid="submit-project"]');
+    
+    // Verify project was created
+    await expect(page.locator('[data-testid="project-list"]')).toContainText('E2E Test Project');
+    
+    // Verify modal is closed
+    await expect(page.locator('[data-testid="create-project-modal"]')).not.toBeVisible();
+  });
+
+  test('should show validation errors for invalid data', async ({ page }) => {
+    await page.goto('/projects');
+    await page.click('[data-testid="create-project-btn"]');
+    
+    // Try to submit empty form
+    await page.click('[data-testid="submit-project"]');
+    
+    // Check for validation errors
+    await expect(page.locator('[data-testid="project-name-error"]')).toBeVisible();
+    await expect(page.locator('[data-testid="project-description-error"]')).toBeVisible();
+  });
+});
 ```
 
-## 🔒 Security Testing
-
-### Input Sanitization Testing
-
-```python
-def test_input_sanitization():
-    """Test input sanitization for security."""
-    from shared.utils.security import sanitize_input
+### Squad Mode Testing
+```typescript
+test.describe('Squad Mode', () => {
+  test('should run squad analysis successfully', async ({ page }) => {
+    await page.goto('/squad');
     
-    # Test dangerous characters
-    dangerous_input = "<script>alert('xss')</script>"
-    sanitized = sanitize_input(dangerous_input)
+    // Enable squad mode
+    await page.click('[data-testid="squad-mode-toggle"]');
     
-    assert "<script>" not in sanitized
-    assert "alert" not in sanitized
+    // Enter creative brief
+    await page.fill('[data-testid="brief-input"]', 'Create a campaign for eco-friendly sneakers targeting Gen Z');
     
-    # Test SQL injection attempts
-    sql_input = "'; DROP TABLE users; --"
-    sanitized = sanitize_input(sql_input)
+    // Start analysis
+    await page.click('[data-testid="start-squad-analysis"]');
     
-    assert "DROP TABLE" not in sanitized
-    assert ";" not in sanitized
+    // Wait for analysis to complete
+    await expect(page.locator('[data-testid="specialist-progress"]')).toBeVisible();
+    
+    // Wait for synthesis
+    await expect(page.locator('[data-testid="squad-synthesis"]')).toBeVisible({ timeout: 30000 });
+    
+    // Verify synthesis contains expected elements
+    await expect(page.locator('[data-testid="synthesis-score"]')).toBeVisible();
+    await expect(page.locator('[data-testid="action-plan"]')).toBeVisible();
+  });
+});
 ```
 
-### File Path Security Testing
+## Error Boundary Testing
 
-```python
-def test_file_path_security():
-    """Test file path security to prevent directory traversal."""
-    from shared.utils.security import validate_file_path
+### Component Error Handling
+```typescript
+import { render, screen } from '@testing-library/react';
+import { ErrorBoundary } from './ErrorBoundary';
+
+const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
+  if (shouldThrow) {
+    throw new Error('Test error');
+  }
+  return <div>No error</div>;
+};
+
+describe('ErrorBoundary', () => {
+  it('should catch and display errors', () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     
-    # Valid paths
-    valid_paths = [
-        "data/clients.json",
-        "logs/agent.log",
-        "config/settings.yaml"
-    ]
+    render(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
+    );
     
-    for path in valid_paths:
-        assert validate_file_path(Path(path)) == True
+    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
     
-    # Invalid paths (directory traversal)
-    invalid_paths = [
-        "../../../etc/passwd",
-        "..\\..\\windows\\system32",
-        "/etc/shadow",
-        "C:\\Windows\\System32"
-    ]
+    consoleSpy.mockRestore();
+  });
+
+  it('should render children when no error', () => {
+    render(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={false} />
+      </ErrorBoundary>
+    );
     
-    for path in invalid_paths:
-        assert validate_file_path(Path(path)) == False
+    expect(screen.getByText('No error')).toBeInTheDocument();
+  });
+});
 ```
 
-## 📈 Performance Testing
+## Mock Data and Fixtures
 
-### Tool Performance Testing
+### Test Data Factories
+```typescript
+// Test data factories
+export const createMockProject = (overrides: Partial<Project> = {}): Project => ({
+  id: 'project-1',
+  name: 'Test Project',
+  description: 'Test description',
+  clientId: 'client-1',
+  clientName: 'Test Client',
+  status: 'In Progress',
+  priority: 'High',
+  progress: 75,
+  budget: 250000,
+  deadline: '2024-06-15',
+  teamMembers: [
+    { id: 'user-1', name: 'John Doe', role: 'Creative Director' },
+  ],
+  createdAt: '2024-01-01',
+  updatedAt: '2024-01-15',
+  ...overrides,
+});
 
-```python
-import time
-import asyncio
-
-@pytest.mark.asyncio
-async def test_tool_performance():
-    """Test tool execution performance."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir)
-    
-    # Test tool execution time
-    start_time = time.time()
-    
-    result = await agent.create_client({
-        "name": "Performance Test Client",
-        "email": "perf@test.com",
-        "industry": "Technology"
-    })
-    
-    end_time = time.time()
-    execution_time = end_time - start_time
-    
-    # Tool should execute within reasonable time
-    assert execution_time < 5.0  # 5 seconds max
-    assert "Created" in result["content"][0]["text"]
+export const createMockClient = (overrides: Partial<Client> = {}): Client => ({
+  id: 'client-1',
+  name: 'Test Client',
+  email: 'test@client.com',
+  phone: '+1-555-0123',
+  company: 'Test Company',
+  industry: 'Technology',
+  budgetRange: '$100k-$500k',
+  notes: 'Test notes',
+  activeProjects: 1,
+  lastContact: '2024-01-15',
+  createdAt: '2024-01-01',
+  updatedAt: '2024-01-15',
+  ...overrides,
+});
 ```
 
-### Squad Mode Performance Testing
-
-```python
-@pytest.mark.asyncio
-async def test_squad_mode_performance():
-    """Test squad mode performance with parallel execution."""
-    from agents.ad_agency_pm.agent import AdAgencyProjectManager
-    
-    config_dir = Path("agents/ad-agency-pm")
-    agent = AdAgencyProjectManager(config_dir, squad_mode=True)
-    
-    # Test parallel analysis performance
-    start_time = time.time()
-    
-    results = await agent._parallel_analysis(
-        ["creative-director", "art-director", "copywriter"],
-        "Performance test task",
-        "Testing parallel execution speed"
-    )
-    
-    end_time = time.time()
-    execution_time = end_time - start_time
-    
-    # Parallel execution should be faster than sequential
-    assert execution_time < 30.0  # 30 seconds max for 3 agents
-    assert len(results) > 0
+### API Mocking
+```typescript
+// Mock API responses
+export const mockApiResponses = {
+  projects: {
+    list: [createMockProject(), createMockProject({ id: 'project-2' })],
+    create: createMockProject({ id: 'project-new' }),
+    update: createMockProject({ name: 'Updated Project' }),
+  },
+  clients: {
+    list: [createMockClient(), createMockClient({ id: 'client-2' })],
+  },
+};
 ```
 
-## 🧪 Test Fixtures and Utilities
+## Performance Testing
 
-### Common Test Fixtures
+### Component Performance
+```typescript
+import { render } from '@testing-library/react';
+import { ProjectList } from './ProjectList';
 
-```python
-import pytest
-from pathlib import Path
-import tempfile
-import json
-
-@pytest.fixture
-def temp_config_dir():
-    """Create temporary configuration directory for testing."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        config_dir = Path(temp_dir)
-        
-        # Create test config.yaml
-        config_content = {
-            "name": "Test Agent",
-            "version": "1.0.0",
-            "model": "claude-3-5-sonnet-20240620",
-            "allowed_tools": [],
-            "system_prompt": "You are a test agent."
-        }
-        
-        config_file = config_dir / "config.yaml"
-        with open(config_file, 'w') as f:
-            import yaml
-            yaml.dump(config_content, f)
-        
-        yield config_dir
-
-@pytest.fixture
-def sample_data():
-    """Provide sample data for testing."""
-    return {
-        "clients": {
-            "Test Client": {
-                "id": "client-001",
-                "name": "Test Client",
-                "email": "test@example.com",
-                "industry": "Technology"
-            }
-        },
-        "projects": {
-            "Test Project": {
-                "id": "project-001",
-                "name": "Test Project",
-                "client_name": "Test Client",
-                "type": "Brand Identity",
-                "budget": 50000
-            }
-        }
-    }
+describe('ProjectList Performance', () => {
+  it('should render large lists efficiently', () => {
+    const largeProjectList = Array.from({ length: 1000 }, (_, i) => 
+      createMockProject({ id: `project-${i}`, name: `Project ${i}` })
+    );
+    
+    const startTime = performance.now();
+    render(<ProjectList projects={largeProjectList} />);
+    const endTime = performance.now();
+    
+    // Should render within 100ms
+    expect(endTime - startTime).toBeLessThan(100);
+  });
+});
 ```
 
-### Test Utilities
+## Accessibility Testing
 
-```python
-def create_test_agent(agent_class, config_dir, **kwargs):
-    """Utility to create test agent instances."""
-    return agent_class(config_dir, **kwargs)
+### Screen Reader Testing
+```typescript
+import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 
-async def run_tool_test(agent, tool_name, args, expected_keywords=None):
-    """Utility to run tool tests with common assertions."""
-    tool_method = getattr(agent, tool_name)
-    result = await tool_method(args)
+expect.extend(toHaveNoViolations);
+
+describe('Accessibility', () => {
+  it('should not have accessibility violations', async () => {
+    const { container } = render(<ProjectForm onSuccess={jest.fn()} />);
     
-    assert "content" in result
-    assert len(result["content"]) > 0
-    assert result["content"][0]["type"] == "text"
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('should have proper ARIA labels', () => {
+    render(<ProjectForm onSuccess={jest.fn()} />);
     
-    if expected_keywords:
-        result_text = result["content"][0]["text"]
-        for keyword in expected_keywords:
-            assert keyword in result_text
-    
-    return result
+    expect(screen.getByRole('button', { name: /create project/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/project name/i)).toBeInTheDocument();
+  });
+});
 ```

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Project, ProjectStatus, Priority, Task, CreateProjectRequest, UpdateProjectRequest } from '@/types/project';
 
 // Types
@@ -93,8 +93,63 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 // Provider
 export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(projectReducer, initialState);
+  const projectsLoaded = useRef(false);
 
-  // Action creators
+  // Load initial mock data
+  useEffect(() => {
+    if (!projectsLoaded.current) {
+      projectsLoaded.current = true;
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // Mock data - replace with actual API call
+      const mockProjects: Project[] = [
+        {
+          id: '1',
+          name: 'Nike Campaign',
+          description: 'Summer 2024 sneaker launch campaign',
+          clientId: 'client-1',
+          clientName: 'Nike Inc.',
+          status: 'In Progress',
+          priority: 'High',
+          progress: 75,
+          budget: 250000,
+          deadline: '2024-06-15',
+          teamMembers: [
+            { id: 'creative-director', name: 'John Doe', role: 'Creative Director' },
+            { id: 'copywriter', name: 'Jane Smith', role: 'Copywriter' },
+            { id: 'art-director', name: 'Peter Jones', role: 'Art Director' }
+          ],
+          createdAt: '2024-01-15',
+          updatedAt: '2024-02-10',
+        },
+        {
+          id: '2',
+          name: 'Apple Watch Ad',
+          description: 'New Apple Watch Series 10 advertisement',
+          clientId: 'client-2',
+          clientName: 'Apple Inc.',
+          status: 'Planning',
+          priority: 'Medium',
+          progress: 25,
+          budget: 180000,
+          deadline: '2024-07-01',
+          teamMembers: [
+            { id: 'creative-director', name: 'John Doe', role: 'Creative Director' },
+            { id: 'production-manager', name: 'Alice Brown', role: 'Production Manager' }
+          ],
+          createdAt: '2024-02-01',
+          updatedAt: '2024-02-05',
+        },
+      ];
+      
+      // Simulate API delay
+      setTimeout(() => {
+        dispatch({ type: 'SET_PROJECTS', payload: mockProjects });
+      }, 1000);
+    }
+  }, []); // Empty dependency array - run only once on mount
+
+  // Action creators - simplified without useCallback
   const setLoading = (loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading });
   const setError = (error: string | null) => dispatch({ type: 'SET_ERROR', payload: error });
   const setProjects = (projects: Project[]) => dispatch({ type: 'SET_PROJECTS', payload: projects });
@@ -105,21 +160,29 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setFilters = (filters: Partial<ProjectState['filters']>) => dispatch({ type: 'SET_FILTERS', payload: filters });
   const resetFilters = () => dispatch({ type: 'RESET_FILTERS' });
 
-  const value: ProjectContextType = {
-    state,
-    dispatch,
-    setLoading,
-    setError,
-    setProjects,
-    addProject,
-    updateProject,
-    deleteProject,
-    selectProject,
-    setFilters,
-    resetFilters,
-  };
+  // Use ref to store stable value
+  const valueRef = useRef<ProjectContextType>();
+  
+  if (!valueRef.current) {
+    valueRef.current = {
+      state,
+      dispatch,
+      setLoading,
+      setError,
+      setProjects,
+      addProject,
+      updateProject,
+      deleteProject,
+      selectProject,
+      setFilters,
+      resetFilters,
+    };
+  } else {
+    // Update only the state part
+    valueRef.current.state = state;
+  }
 
-  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
+  return <ProjectContext.Provider value={valueRef.current}>{children}</ProjectContext.Provider>;
 };
 
 // Hook
@@ -151,10 +214,12 @@ export const useFilteredProjects = () => {
   const { state } = useProjectContext();
   const { projects, filters } = state;
 
-  return projects.filter(project => {
-    if (filters.status && project.status !== filters.status) return false;
-    if (filters.priority && project.priority !== filters.priority) return false;
-    if (filters.search && !project.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    return true;
-  });
+  return useMemo(() => {
+    return projects.filter(project => {
+      if (filters.status && project.status !== filters.status) return false;
+      if (filters.priority && project.priority !== filters.priority) return false;
+      if (filters.search && !project.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      return true;
+    });
+  }, [projects, filters.status, filters.priority, filters.search]);
 };

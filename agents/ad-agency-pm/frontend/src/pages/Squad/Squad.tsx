@@ -5,7 +5,6 @@ import { Textarea } from '@/components/common/Textarea';
 import { SquadModeToggle } from '@/components/squad/SquadModeToggle';
 import { SpecialistCards } from '@/components/squad/SpecialistCards';
 import { useSquadMode, useSquadAnalysis, useSquadContext } from '@/context';
-import { useWebSocket } from '@/hooks/useWebSocket';
 
 const Squad: React.FC = () => {
   const isSquadMode = useSquadMode();
@@ -13,7 +12,6 @@ const Squad: React.FC = () => {
   const { toggleSquadMode, startAnalysis, resetAnalysis } = useSquadContext();
   const [brief, setBrief] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { connected } = useWebSocket();
 
   const handleToggleSquadMode = (enabled: boolean) => {
     toggleSquadMode();
@@ -98,11 +96,6 @@ const Squad: React.FC = () => {
                   )}
                 </div>
 
-                {!connected && (
-                  <p className="text-sm text-warning text-center">
-                    ⚠️ WebSocket disconnected - Real-time updates unavailable
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>

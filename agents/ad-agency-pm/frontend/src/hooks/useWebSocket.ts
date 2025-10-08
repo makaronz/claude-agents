@@ -34,11 +34,26 @@ interface WebSocketEvents {
 export const useWebSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const { addProject, updateProject, deleteProject } = useProjectContext();
-  const { addClient, updateClient } = useClientContext();
-  const { updateProgress, addResult, setSynthesis } = useSquadContext();
-  const { addNotification } = useUIContext();
   const reconnectAttempts = useRef(0);
+  
+  // Get context actions safely
+  let projectContext: any, clientContext: any, squadContext: any, uiContext: any;
+  
+  try {
+    projectContext = useProjectContext();
+    clientContext = useClientContext();
+    squadContext = useSquadContext();
+    uiContext = useUIContext();
+  } catch (error) {
+    // Context not available yet, return early
+    return { socket: null, connected: false, emit: () => {} };
+  }
+  
+  // Extract context actions
+  const { addProject, updateProject, deleteProject } = projectContext;
+  const { addClient, updateClient } = clientContext;
+  const { updateProgress, addResult, setSynthesis } = squadContext;
+  const { addNotification } = uiContext;
 
   useEffect(() => {
     // Skip WebSocket if no URL configured

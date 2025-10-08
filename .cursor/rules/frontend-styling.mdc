@@ -1,850 +1,179 @@
 ---
-globs: src/**/*.css,src/**/*.scss,src/**/*.sass,src/**/*.less,tailwind.config.js,postcss.config.js,frontend/**/*.css,frontend/**/*.scss,frontend/**/*.sass,frontend/**/*.less
+globs: *.tsx,*.ts,*.css
 description: Frontend styling patterns and best practices for CSS, Tailwind, and design systems
 ---
 
-# 🎨 Frontend Styling Patterns
+# Frontend Styling Guidelines
 
-## 🎯 Design System Foundation
+## Tailwind CSS Design System
 
 ### Color Palette
+- **Primary**: `text-primary-600`, `bg-primary-600` - Main brand colors
+- **Secondary**: `text-secondary-600`, `bg-secondary-600` - Accent colors for Squad Mode
+- **Success**: `text-success-600`, `bg-success-600` - Success states
+- **Warning**: `text-warning-600`, `bg-warning-600` - Warning states
+- **Error**: `text-error-600`, `bg-error-600` - Error states
 
-**Use consistent color system:**
-
-```css
-/* tailwind.config.js */
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        // Primary colors
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
-        
-        // Secondary colors
-        secondary: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7c3aed',
-          800: '#6b21a8',
-          900: '#581c87',
-        },
-        
-        // Accent colors
-        accent: {
-          green: '#10b981',
-          orange: '#f59e0b',
-          red: '#ef4444',
-          yellow: '#eab308',
-        },
-        
-        // Status colors
-        success: '#10b981',
-        warning: '#f59e0b',
-        error: '#ef4444',
-        info: '#3b82f6',
-        
-        // Neutral colors
-        gray: {
-          50: '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
-          300: '#d1d5db',
-          400: '#9ca3af',
-          500: '#6b7280',
-          600: '#4b5563',
-          700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-        },
-      },
-    },
-  },
-};
-```
-
-### Typography Scale
-
-**Use consistent typography system:**
-
-```css
-/* tailwind.config.js */
-module.exports = {
-  theme: {
-    extend: {
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-      },
-      fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1rem' }],
-        'sm': ['0.875rem', { lineHeight: '1.25rem' }],
-        'base': ['1rem', { lineHeight: '1.5rem' }],
-        'lg': ['1.125rem', { lineHeight: '1.75rem' }],
-        'xl': ['1.25rem', { lineHeight: '1.75rem' }],
-        '2xl': ['1.5rem', { lineHeight: '2rem' }],
-        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
-        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
-        '5xl': ['3rem', { lineHeight: '1' }],
-        '6xl': ['3.75rem', { lineHeight: '1' }],
-      },
-      fontWeight: {
-        normal: '400',
-        medium: '500',
-        semibold: '600',
-        bold: '700',
-      },
-    },
-  },
-};
-```
-
-### Spacing System
-
-**Use consistent spacing scale:**
-
-```css
-/* tailwind.config.js */
-module.exports = {
-  theme: {
-    extend: {
-      spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-        '128': '32rem',
-      },
-      borderRadius: {
-        'none': '0',
-        'sm': '0.125rem',
-        'DEFAULT': '0.25rem',
-        'md': '0.375rem',
-        'lg': '0.5rem',
-        'xl': '0.75rem',
-        '2xl': '1rem',
-        '3xl': '1.5rem',
-        'full': '9999px',
-      },
-    },
-  },
-};
-```
-
-## 🎨 Component Styling Patterns
-
-### Button Variants
-
-**Create consistent button styles:**
-
+### Component Variants
 ```typescript
-// Button component with variants
-interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'danger' | 'squad' | 'ghost' | 'outline';
-  size?: 'sm' | 'md' | 'lg';
-  loading?: boolean;
-  disabled?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}
-
-const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  disabled = false,
-  className,
-  children,
-  ...props
-}) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
-  
-  const variantClasses = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm hover:shadow-md',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
-    danger: 'bg-error text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow-md',
-    squad: 'bg-gradient-to-r from-secondary-600 to-primary-600 text-white hover:from-secondary-700 hover:to-primary-700 focus:ring-secondary-500 shadow-lg hover:shadow-xl',
-    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
-    outline: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500',
-  };
-  
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
-  };
-  
-  return (
-    <button
-      className={cn(
-        baseClasses,
-        variantClasses[variant],
-        sizeClasses[size],
-        className
-      )}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading && (
-        <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      )}
-      {children}
-    </button>
-  );
-};
+// Button variants using class-variance-authority
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md font-medium transition-all duration-200",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary-600 text-white hover:bg-primary-700",
+        outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
+        squad: "bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700",
+        ghost: "text-gray-600 hover:bg-gray-100",
+      },
+      size: {
+        sm: "px-3 py-1.5 text-sm",
+        md: "px-4 py-2 text-sm",
+        lg: "px-6 py-3 text-base",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "md",
+    },
+  }
+);
 ```
 
 ### Card Components
-
-**Create consistent card styles:**
-
 ```typescript
-// Card component with variants
-interface CardProps {
-  variant?: 'default' | 'elevated' | 'squad' | 'outlined';
-  className?: string;
-  children: React.ReactNode;
-}
-
-const Card: React.FC<CardProps> = ({ variant = 'default', className, children }) => {
-  const baseClasses = 'rounded-lg transition-all duration-200';
-  
-  const variantClasses = {
-    default: 'bg-white border border-gray-200 shadow-sm hover:shadow-md',
-    elevated: 'bg-white border border-gray-200 shadow-lg hover:shadow-xl',
-    squad: 'bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 shadow-lg hover:shadow-xl',
-    outlined: 'bg-white border-2 border-gray-300 hover:border-gray-400',
-  };
-  
-  return (
-    <div className={cn(baseClasses, variantClasses[variant], className)}>
-      {children}
-    </div>
-  );
-};
-
-// Card sub-components
-const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={cn('px-6 py-4 border-b border-gray-200', className)}>
-    {children}
-  </div>
-);
-
-const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={cn('px-6 py-4', className)}>
-    {children}
-  </div>
-);
-
-const CardFooter: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={cn('px-6 py-4 border-t border-gray-200', className)}>
-    {children}
-  </div>
-);
-```
-
-### Form Components
-
-**Create consistent form styles:**
-
-```typescript
-// Input component
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-  variant?: 'default' | 'filled' | 'outlined';
-}
-
-const Input: React.FC<InputProps> = ({
-  label,
-  error,
-  helperText,
-  variant = 'default',
-  className,
-  ...props
-}) => {
-  const baseClasses = 'w-full px-3 py-2 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1';
-  
-  const variantClasses = {
-    default: 'border-gray-300 focus:border-primary-500 focus:ring-primary-500',
-    filled: 'bg-gray-100 border-gray-300 focus:bg-white focus:border-primary-500 focus:ring-primary-500',
-    outlined: 'border-2 border-gray-300 focus:border-primary-500 focus:ring-primary-500',
-  };
-  
-  const errorClasses = error ? 'border-error focus:border-error focus:ring-error' : '';
-  
-  return (
-    <div className="space-y-1">
-      {label && (
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
-      )}
-      <input
-        className={cn(
-          baseClasses,
-          variantClasses[variant],
-          errorClasses,
-          className
-        )}
-        {...props}
-      />
-      {error && (
-        <p className="text-sm text-error">{error}</p>
-      )}
-      {helperText && !error && (
-        <p className="text-sm text-gray-500">{helperText}</p>
-      )}
-    </div>
-  );
-};
-
-// Select component
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  error?: string;
-  options: { value: string; label: string }[];
-}
-
-const Select: React.FC<SelectProps> = ({ label, error, options, className, ...props }) => {
-  const baseClasses = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500';
-  const errorClasses = error ? 'border-error focus:border-error focus:ring-error' : '';
-  
-  return (
-    <div className="space-y-1">
-      {label && (
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
-      )}
-      <select
-        className={cn(baseClasses, errorClasses, className)}
-        {...props}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p className="text-sm text-error">{error}</p>
-      )}
-    </div>
-  );
-};
-```
-
-## 📱 Responsive Design Patterns
-
-### Mobile-First Approach
-
-**Use mobile-first responsive design:**
-
-```typescript
-// Responsive grid component
-const ResponsiveGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {children}
-    </div>
-  );
-};
-
-// Responsive text component
-const ResponsiveText: React.FC<{ children: React.ReactNode; variant?: 'body' | 'heading' }> = ({ 
-  children, 
-  variant = 'body' 
-}) => {
-  const classes = {
-    body: 'text-sm sm:text-base md:text-lg',
-    heading: 'text-lg sm:text-xl md:text-2xl lg:text-3xl',
-  };
-  
-  return (
-    <p className={cn('font-medium', classes[variant])}>
-      {children}
-    </p>
-  );
-};
-
-// Responsive container
-const Container: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => {
-  return (
-    <div className={cn('mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl', className)}>
-      {children}
-    </div>
-  );
-};
-```
-
-### Breakpoint Utilities
-
-**Use consistent breakpoint patterns:**
-
-```css
-/* Custom breakpoints */
-@media (min-width: 640px) { /* sm */ }
-@media (min-width: 768px) { /* md */ }
-@media (min-width: 1024px) { /* lg */ }
-@media (min-width: 1280px) { /* xl */ }
-@media (min-width: 1536px) { /* 2xl */ }
-
-/* Responsive utilities */
-.responsive-grid {
-  @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
-}
-
-.responsive-text {
-  @apply text-sm sm:text-base md:text-lg lg:text-xl;
-}
-
-.responsive-spacing {
-  @apply p-4 sm:p-6 md:p-8 lg:p-12;
-}
-```
-
-## 🎨 Animation and Transitions
-
-### Transition Patterns
-
-**Use consistent transition patterns:**
-
-```css
-/* Base transition classes */
-.transition-base {
-  @apply transition-all duration-200 ease-in-out;
-}
-
-.transition-fast {
-  @apply transition-all duration-150 ease-in-out;
-}
-
-.transition-slow {
-  @apply transition-all duration-300 ease-in-out;
-}
-
-/* Hover effects */
-.hover-lift {
-  @apply hover:transform hover:-translate-y-1 hover:shadow-lg;
-}
-
-.hover-scale {
-  @apply hover:transform hover:scale-105;
-}
-
-.hover-fade {
-  @apply hover:opacity-80;
-}
-```
-
-### Animation Components
-
-**Create reusable animation components:**
-
-```typescript
-// Fade in animation
-const FadeIn: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
-  return (
-    <div
-      className="animate-fade-in"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
-};
-
-// Slide in animation
-const SlideIn: React.FC<{ 
-  children: React.ReactNode; 
-  direction?: 'left' | 'right' | 'up' | 'down';
-  delay?: number;
-}> = ({ children, direction = 'up', delay = 0 }) => {
-  const directionClasses = {
-    left: 'animate-slide-in-left',
-    right: 'animate-slide-in-right',
-    up: 'animate-slide-in-up',
-    down: 'animate-slide-in-down',
-  };
-  
-  return (
-    <div
-      className={cn('animate-slide-in', directionClasses[direction])}
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
-};
-```
-
-### Custom Animations
-
-**Define custom animations:**
-
-```css
-/* tailwind.config.js */
-module.exports = {
-  theme: {
-    extend: {
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-in-out',
-        'slide-in-up': 'slideInUp 0.5s ease-out',
-        'slide-in-down': 'slideInDown 0.5s ease-out',
-        'slide-in-left': 'slideInLeft 0.5s ease-out',
-        'slide-in-right': 'slideInRight 0.5s ease-out',
-        'bounce-in': 'bounceIn 0.6s ease-out',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideInUp: {
-          '0%': { transform: 'translateY(100%)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        slideInDown: {
-          '0%': { transform: 'translateY(-100%)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        slideInLeft: {
-          '0%': { transform: 'translateX(-100%)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        slideInRight: {
-          '0%': { transform: 'translateX(100%)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        bounceIn: {
-          '0%': { transform: 'scale(0.3)', opacity: '0' },
-          '50%': { transform: 'scale(1.05)' },
-          '70%': { transform: 'scale(0.9)' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
+// Card variants for different use cases
+const cardVariants = cva(
+  "rounded-lg border bg-white shadow-sm",
+  {
+    variants: {
+      variant: {
+        default: "border-gray-200",
+        squad: "border-transparent bg-gradient-to-br from-purple-50 to-blue-50",
+        elevated: "border-gray-200 shadow-lg",
       },
     },
-  },
-};
-```
-
-## 🎯 Layout Patterns
-
-### Grid Systems
-
-**Use consistent grid patterns:**
-
-```typescript
-// Dashboard grid
-const DashboardGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {children}
-    </div>
-  );
-};
-
-// Stats grid
-const StatsGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {children}
-    </div>
-  );
-};
-
-// Project grid
-const ProjectGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      {children}
-    </div>
-  );
-};
-```
-
-### Flexbox Patterns
-
-**Use consistent flexbox patterns:**
-
-```typescript
-// Flex container
-const FlexContainer: React.FC<{ 
-  children: React.ReactNode; 
-  direction?: 'row' | 'col';
-  justify?: 'start' | 'center' | 'end' | 'between' | 'around';
-  align?: 'start' | 'center' | 'end' | 'stretch';
-  wrap?: boolean;
-  gap?: 'sm' | 'md' | 'lg';
-  className?: string;
-}> = ({ 
-  children, 
-  direction = 'row',
-  justify = 'start',
-  align = 'start',
-  wrap = false,
-  gap = 'md',
-  className 
-}) => {
-  const directionClasses = {
-    row: 'flex-row',
-    col: 'flex-col',
-  };
-  
-  const justifyClasses = {
-    start: 'justify-start',
-    center: 'justify-center',
-    end: 'justify-end',
-    between: 'justify-between',
-    around: 'justify-around',
-  };
-  
-  const alignClasses = {
-    start: 'items-start',
-    center: 'items-center',
-    end: 'items-end',
-    stretch: 'items-stretch',
-  };
-  
-  const gapClasses = {
-    sm: 'gap-2',
-    md: 'gap-4',
-    lg: 'gap-6',
-  };
-  
-  return (
-    <div
-      className={cn(
-        'flex',
-        directionClasses[direction],
-        justifyClasses[justify],
-        alignClasses[align],
-        wrap && 'flex-wrap',
-        gapClasses[gap],
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-};
-```
-
-## 🎨 Theme and Dark Mode
-
-### Dark Mode Support
-
-**Implement dark mode with Tailwind:**
-
-```css
-/* tailwind.config.js */
-module.exports = {
-  darkMode: 'class', // or 'media'
-  theme: {
-    extend: {
-      colors: {
-        // Light mode colors
-        primary: {
-          50: '#eff6ff',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-        },
-        // Dark mode colors
-        dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-        },
-      },
+    defaultVariants: {
+      variant: "default",
     },
-  },
-};
+  }
+);
 ```
 
-### Theme Toggle Component
+## Animation and Transitions
 
-**Create theme toggle functionality:**
+### Consistent Transition Classes
+- **Standard**: `transition-all duration-200`
+- **Slow**: `transition-all duration-300`
+- **Fast**: `transition-all duration-150`
+- **Hover effects**: `hover:shadow-lg transition-shadow`
+- **Focus states**: `focus:ring-2 focus:ring-primary-500 focus:ring-offset-2`
 
+### Loading States
 ```typescript
-// Theme toggle component
-const ThemeToggle: React.FC = () => {
-  const [isDark, setIsDark] = useState(false);
-  
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-  
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
-  
-  return (
-    <button
-      onClick={toggleTheme}
-      className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-    >
-      {isDark ? (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ) : (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-      )}
-    </button>
-  );
-};
+// Loading spinner component
+const LoadingSpinner = () => (
+  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-primary-600" />
+);
+
+// Loading button state
+<Button disabled={isLoading} loading={isLoading}>
+  {isLoading ? 'Creating...' : 'Create Project'}
+</Button>
 ```
 
-## 🎯 Utility Classes
+## Responsive Design
 
-### Custom Utilities
+### Breakpoint Strategy
+- **Mobile First**: Design for mobile, then enhance for larger screens
+- **Grid Layouts**: Use CSS Grid for complex layouts, Flexbox for simpler ones
+- **Responsive Typography**: Use `text-sm md:text-base lg:text-lg` pattern
 
-**Create custom utility classes:**
-
-```css
-/* Custom utilities */
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .glass {
-    @apply bg-white/80 backdrop-blur-sm border border-white/20;
-  }
-  
-  .glass-dark {
-    @apply bg-gray-900/80 backdrop-blur-sm border border-gray-700/20;
-  }
-  
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent;
-  }
-  
-  .shadow-glow {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-  }
-  
-  .shadow-glow-purple {
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
-  }
-}
-```
-
-### Component Utilities
-
-**Create component-specific utilities:**
-
+### Layout Patterns
 ```typescript
-// Utility function for conditional classes
-export const cn = (...classes: (string | undefined | null | false)[]): string => {
-  return classes.filter(Boolean).join(' ');
-};
+// Responsive grid
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-// Status color utilities
-export const getStatusColor = (status: string) => {
-  const statusColors = {
-    'completed': 'bg-green-100 text-green-800',
-    'in progress': 'bg-blue-100 text-blue-800',
-    'on hold': 'bg-yellow-100 text-yellow-800',
-    'cancelled': 'bg-red-100 text-red-800',
-    'pending': 'bg-gray-100 text-gray-800',
-  };
-  
-  return statusColors[status.toLowerCase()] || statusColors.pending;
-};
+// Responsive spacing
+<div className="p-4 md:p-6 lg:p-8">
 
-// Priority color utilities
-export const getPriorityColor = (priority: string) => {
-  const priorityColors = {
-    'critical': 'text-red-600',
-    'high': 'text-orange-600',
-    'medium': 'text-yellow-600',
-    'low': 'text-green-600',
-  };
-  
-  return priorityColors[priority.toLowerCase()] || priorityColors.medium;
-};
+// Responsive text
+<h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">
 ```
 
-## 🎯 Best Practices Summary
+## Form Styling
 
-### Design System ✅
-- Use consistent color palette and typography
-- Implement proper spacing and sizing scales
-- Create reusable component variants
-- Follow mobile-first responsive design
-- Use semantic color names (primary, secondary, accent)
+### Input Components
+```typescript
+// Consistent input styling
+const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm";
 
-### Performance ✅
-- Use CSS-in-JS sparingly, prefer Tailwind classes
-- Implement proper loading states and transitions
-- Use CSS transforms for animations
-- Optimize images and assets
-- Minimize custom CSS
+// Error states
+const errorInputClasses = "border-red-500 focus:ring-red-500 focus:border-red-500";
+```
 
-### Accessibility ✅
-- Use proper color contrast ratios
-- Implement focus states and keyboard navigation
-- Use semantic HTML elements
-- Provide alternative text for images
-- Test with screen readers
+### Form Layout
+```typescript
+// Form field wrapper
+<div className="space-y-6">
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Label Text <span className="text-red-500">*</span>
+    </label>
+    <input className={inputClasses} />
+    {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+  </div>
+</div>
+```
 
-### Maintainability ✅
-- Use consistent naming conventions
-- Create reusable utility functions
-- Document component variants
-- Use TypeScript for type safety
-- Follow CSS organization patterns
+## Dark Mode Considerations
+
+### Color Scheme Support
+```typescript
+// Dark mode classes
+const darkModeClasses = "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
+const darkBorderClasses = "border-gray-300 dark:border-gray-600";
+```
+
+## Accessibility
+
+### Focus Management
+- Always provide visible focus indicators
+- Use `focus:ring-2 focus:ring-primary-500` for focus states
+- Ensure proper tab order
+
+### Color Contrast
+- Maintain WCAG AA compliance
+- Use semantic colors for states (success, warning, error)
+- Provide alternative indicators beyond color
+
+## Component Styling Patterns
+
+### Modal/Dialog Styling
+```typescript
+// Modal overlay
+<div className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75" />
+
+// Modal content
+<div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+```
+
+### Status Indicators
+```typescript
+// Status badges
+<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+  Active
+</span>
+```
+
+### Progress Indicators
+```typescript
+// Progress bar
+<div className="w-full bg-gray-200 rounded-full h-2">
+  <div 
+    className="bg-primary-600 h-2 rounded-full transition-all duration-300" 
+    style={{ width: `${progress}%` }}
+  />
+</div>
+```
