@@ -2,19 +2,16 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { SquadModeToggle } from '@/components/squad/SquadModeToggle';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useGetProjectsQuery } from '@/store/api/projectsApi';
-import { useGetClientsQuery } from '@/store/api/clientsApi';
-import { toggleSquadMode } from '@/store/slices/squadSlice';
+import { useProjects, useClients, useSquadMode, useSquadContext } from '@/context';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/helpers';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const { data: projects = [] } = useGetProjectsQuery();
-  const { data: clients = [] } = useGetClientsQuery();
-  const { isSquadMode } = useAppSelector((state) => state.squad);
+  const projects = useProjects();
+  const clients = useClients();
+  const isSquadMode = useSquadMode();
+  const { toggleSquadMode } = useSquadContext();
 
   // Calculate stats
   const activeProjects = projects.filter((p) => p.status === 'In Progress').length;
@@ -24,7 +21,7 @@ const Dashboard: React.FC = () => {
   );
 
   const handleToggleSquadMode = () => {
-    dispatch(toggleSquadMode());
+    toggleSquadMode();
   };
 
   return (

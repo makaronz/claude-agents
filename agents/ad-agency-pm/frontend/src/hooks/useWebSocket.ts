@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useAppDispatch } from '@/store/hooks';
-import { addProject, updateProject, deleteProject } from '@/store/slices/projectsSlice';
-import { addClient, updateClient } from '@/store/slices/clientsSlice';
-import {
-  setSquadAnalysisProgress,
-  setSquadResults,
-  setSquadSynthesis,
-  addSpecialistResult,
-} from '@/store/slices/squadSlice';
-import { addNotification } from '@/store/slices/uiSlice';
+import { useProjectContext, useClientContext, useSquadContext, useUIContext } from '@/context';
 import config from '@/config/environment';
 
 interface WebSocketEvents {
@@ -43,7 +34,10 @@ interface WebSocketEvents {
 export const useWebSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const dispatch = useAppDispatch();
+  const { addProject, updateProject, deleteProject } = useProjectContext();
+  const { addClient, updateClient } = useClientContext();
+  const { updateProgress, addResult, setSynthesis } = useSquadContext();
+  const { addNotification } = useUIContext();
   const reconnectAttempts = useRef(0);
 
   useEffect(() => {
@@ -60,26 +54,20 @@ export const useWebSocket = () => {
       reconnectAttempts.current = 0;
       console.log('WebSocket connected');
       
-      dispatch(
-        addNotification({
-          type: 'success',
-          message: 'Connected to server',
-          duration: 3000,
-        })
-      );
+      addNotification({
+        type: 'success',
+        message: 'Connected to server',
+      });
     });
 
     newSocket.on('disconnect', () => {
       setConnected(false);
       console.log('WebSocket disconnected');
       
-      dispatch(
-        addNotification({
-          type: 'warning',
-          message: 'Connection lost. Reconnecting...',
-          duration: 3000,
-        })
-      );
+      addNotification({
+        type: 'warning',
+        message: 'Connection lost. Reconnecting...',
+      });
     });
 
     newSocket.on('connect_error', (error) => {
@@ -89,45 +77,36 @@ export const useWebSocket = () => {
 
     // Project events
     newSocket.on('project:created', (project) => {
-      dispatch(addProject(project));
-      dispatch(
-        addNotification({
-          type: 'success',
-          message: `Project "${project.name}" created`,
-          duration: 5000,
-        })
-      );
+      addProject(project);
+      addNotification({
+        type: 'success',
+        message: `Project "${project.name}" created`,
+      });
     });
 
     newSocket.on('project:updated', (project) => {
-      dispatch(updateProject(project));
+      updateProject(project);
     });
 
     newSocket.on('project:deleted', ({ id }) => {
-      dispatch(deleteProject(id));
-      dispatch(
-        addNotification({
-          type: 'info',
-          message: 'Project deleted',
-          duration: 3000,
-        })
-      );
+      deleteProject(id);
+      addNotification({
+        type: 'info',
+        message: 'Project deleted',
+      });
     });
 
     // Client events
     newSocket.on('client:created', (client) => {
-      dispatch(addClient(client));
-      dispatch(
-        addNotification({
-          type: 'success',
-          message: `Client "${client.name}" created`,
-          duration: 5000,
-        })
-      );
+      addClient(client);
+      addNotification({
+        type: 'success',
+        message: `Client "${client.name}" created`,
+      });
     });
 
     newSocket.on('client:updated', (client) => {
-      dispatch(updateClient(client));
+      updateClient(client);
     });
 
     // Squad events
@@ -136,31 +115,28 @@ export const useWebSocket = () => {
     });
 
     newSocket.on('squad:analysis:progress', ({ briefId, specialist, progress }) => {
-      dispatch(setSquadAnalysisProgress({ briefId, specialist, progress, status: 'analyzing' }));
+      updateProgress({ briefId, specialist, progress, status: 'analyzing' });
     });
 
     newSocket.on('squad:specialist:completed', (result) => {
-      dispatch(addSpecialistResult(result));
+      addResult(result);
     });
 
     newSocket.on('squad:analysis:completed', ({ briefId, results }) => {
-      dispatch(setSquadResults({ briefId, results }));
-      dispatch(
-        addNotification({
-          type: 'success',
-          message: 'Squad analysis completed!',
-          duration: 5000,
-        })
-      );
+      // Handle completed analysis
+      addNotification({
+        type: 'success',
+        message: 'Squad analysis completed!',
+      });
     });
 
     newSocket.on('squad:synthesis:completed', ({ briefId, synthesis }) => {
-      dispatch(setSquadSynthesis({ briefId, synthesis }));
+      setSynthesis(synthesis);
     });
 
     // General notifications
     newSocket.on('notification:new', ({ type, message }) => {
-      dispatch(addNotification({ type, message, duration: 5000 }));
+      addNotification({ type, message });
     });
 
     setSocket(newSocket);
@@ -168,7 +144,7 @@ export const useWebSocket = () => {
     return () => {
       newSocket.close();
     };
-  }, [dispatch]);
+  }, [addProject, updateProject, deleteProject, addClient, updateClient, updateProgress, addResult, setSynthesis, addNotification]);
 
   const emit = <K extends keyof WebSocketEvents>(
     event: K,

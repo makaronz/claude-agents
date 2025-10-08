@@ -4,40 +4,43 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Ca
 import { Textarea } from '@/components/common/Textarea';
 import { SquadModeToggle } from '@/components/squad/SquadModeToggle';
 import { SpecialistCards } from '@/components/squad/SpecialistCards';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { toggleSquadMode, startAnalysis, resetCurrentAnalysis } from '@/store/slices/squadSlice';
-import { useStartAnalysisMutation } from '@/store/api/squadApi';
+import { useSquadMode, useSquadAnalysis, useSquadContext } from '@/context';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
 const Squad: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { isSquadMode, currentAnalysis } = useAppSelector((state) => state.squad);
+  const isSquadMode = useSquadMode();
+  const currentAnalysis = useSquadAnalysis();
+  const { toggleSquadMode, startAnalysis, resetAnalysis } = useSquadContext();
   const [brief, setBrief] = useState('');
-  const [startSquadAnalysis, { isLoading }] = useStartAnalysisMutation();
+  const [isLoading, setIsLoading] = useState(false);
   const { connected } = useWebSocket();
 
   const handleToggleSquadMode = (enabled: boolean) => {
-    dispatch(toggleSquadMode());
+    toggleSquadMode();
   };
 
   const handleStartAnalysis = async () => {
     if (!brief.trim()) return;
 
+    setIsLoading(true);
     try {
-      const response = await startSquadAnalysis({ brief }).unwrap();
-      dispatch(startAnalysis({ briefId: response.briefId, brief }));
+      // Mock API call - replace with actual implementation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      startAnalysis();
     } catch (error) {
       console.error('Failed to start analysis:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleReset = () => {
-    dispatch(resetCurrentAnalysis());
+    resetAnalysis();
     setBrief('');
   };
 
-  const isAnalyzing = currentAnalysis.status === 'analyzing';
-  const isComplete = currentAnalysis.status === 'completed';
+  const isAnalyzing = currentAnalysis.isRunning;
+  const isComplete = currentAnalysis.synthesis !== null;
 
   return (
     <div className="space-y-6">

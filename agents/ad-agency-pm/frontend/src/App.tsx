@@ -1,4 +1,6 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AppProviders } from './context';
 import { useWebSocket } from './hooks/useWebSocket';
 import Layout from './components/layout/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -8,6 +10,14 @@ import Squad from './pages/Squad/Squad';
 import Settings from './pages/Settings/Settings';
 
 function App() {
+  return (
+    <AppProviders>
+      <AppContent />
+    </AppProviders>
+  );
+}
+
+function AppContent() {
   // Initialize WebSocket connection globally
   const { connected } = useWebSocket();
 
